@@ -1,11 +1,11 @@
 'use client';
 import { useState } from 'react';
-import { useScoped, useStore } from '@/lib/store';
+import { useScoped } from '@/lib/store';
 import { AGE_BUCKETS, ageBucket, ageing, fmtDate, isOverdue, needsEscalation } from '@/lib/metrics';
 import { REPORT_DATE } from '@/lib/brand';
 import { Bars, C } from '@/components/charts';
-import { Register, type Col, type RegFilter } from '@/components/Register';
-import { Button, Chip, Drawer, EmptyState, PageHeader, Tile, inputCls } from '@/components/ui';
+import { Register, type Col, type RegFilter, type RegTab } from '@/components/Register';
+import { Button, Chip, Tile, inputCls } from '@/components/ui';
 import type { ActionItem } from '@/lib/types';
 
 const PEOPLE = ['Anita Rao', 'Vikram Shetty', 'Meera Nair', 'Rohit Kulkarni', 'Sanjay Patil', 'Deepa Menon'];
@@ -13,26 +13,46 @@ const CATS = ['Design', 'Procurement', 'Construction', 'Commercial', 'Site facil
 const STATUS: ActionItem['status'][] = ['Open', 'In progress', 'Closed'];
 const DISC = ['Civil', 'Structural', 'Mechanical', 'Electrical', 'Instrumentation', 'General'];
 const tally = (keys: string[], f: (a: ActionItem) => string, rows: ActionItem[]) => keys.map((k) => ({ name: k, Actions: rows.filter((r) => f(r) === k).length }));
+const S = [{ key: 'Actions', name: 'Actions', color: C.ink }];
+
+function Comments({ a }: { a: ActionItem }) {
+  const { updateRow, toast } = useScoped();
+  const [text, setText] = useState('');
+  const add = () => {
+    if (!text.trim()) return toast('Write a comment before adding it.', 'error');
+    updateRow('actions', a.id, { comments: [...a.comments, { by: 'You', at: REPORT_DATE, text: text.trim() }] });
+    setText(''); toast('Comment added');
+  };
+  return (
+    <div>
+      <h4 className="mb-2 text-sm font-medium">Comments ({a.comments.length})</h4>
+      {a.comments.length ? (
+        <ul className="mb-3 flex flex-col gap-2">{a.comments.map((c, i) => <li key={i} className="rounded-lg bg-white/10 p-3 text-sm"><span className="text-xs text-fog">{c.by}, {fmtDate(c.at)}</span><p>{c.text}</p></li>)}</ul>
+      ) : <p className="mb-3 text-sm text-fog">No comments yet. Add one to record a decision or update.</p>}
+      <div className="flex gap-2">
+        <input aria-label="New comment" value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a comment" className={inputCls} />
+        <Button onClick={add} className="!bg-white/15 !text-white">Add comment</Button>
+      </div>
+    </div>
+  );
+}
 
 export default function Actions() {
-  const { actions, active, filters, updateRow, toast } = useScoped();
-  const { actions: all } = useStore();
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [text, setText] = useState('');
-  const current = all.find((a) => a.id === openId);
+  const { actions, active, filters } = useScoped();
   const pid = filters.projectId === 'all' ? active.id : filters.projectId;
-
   const cols: Col<ActionItem>[] = [
     { key: 'id', label: 'ID' },
     { key: 'title', label: 'Action', editable: true, add: true, required: true },
     { key: 'category', label: 'Category', type: 'select', options: CATS, editable: true, add: true },
     { key: 'discipline', label: 'Discipline', type: 'select', options: DISC, editable: true, add: true },
     { key: 'assignee', label: 'Assigned to', type: 'select', options: PEOPLE, editable: true, add: true },
-    { key: 'openDate', label: 'Opened', type: 'date', editable: true, add: true, render: (a) => (
-      <span className="flex flex-wrap items-center gap-2">{fmtDate(a.openDate)}<span className="text-xs text-graphite">{ageing(a.openDate)} days</span>{needsEscalation(a) && <Chip tone="bad">Escalate</Chip>}</span>) },
-    { key: 'dueDate', label: 'Due', type: 'date', editable: true, add: true, render: (a) => (
-      <span className="flex flex-wrap items-center gap-2">{fmtDate(a.dueDate)}{isOverdue(a) && <Chip tone="bad">Overdue</Chip>}</span>) },
+    { key: 'openDate', label: 'Opened', type: 'date', editable: true, add: true, render: (a) => <span className="flex flex-wrap items-center gap-2">{fmtDate(a.openDate)}{needsEscalation(a) && <Chip tone="bad">Escalate</Chip>}</span> },
+    { key: 'dueDate', label: 'Due', type: 'date', editable: true, add: true, render: (a) => <span className="flex flex-wrap items-center gap-2">{fmtDate(a.dueDate)}{isOverdue(a) && <Chip tone="bad">Overdue</Chip>}</span> },
     { key: 'status', label: 'Status', type: 'select', options: STATUS, editable: true },
+  ];
+  const tabs: RegTab<ActionItem>[] = [
+    { id: 'all', label: 'All', test: () => true }, { id: 'open', label: 'Open', test: (a) => a.status !== 'Closed' },
+    { id: 'closed', label: 'Closed', test: (a) => a.status === 'Closed' }, { id: 'overdue', label: 'Overdue', test: isOverdue },
   ];
   const filters2: RegFilter<ActionItem>[] = [
     { key: 'state', label: 'State', options: ['Active', 'Closed'], test: (r, v) => (v === 'Closed') === (r.status === 'Closed') },
@@ -40,42 +60,20 @@ export default function Actions() {
     { key: 'assignee', label: 'Assigned to', options: PEOPLE, test: (r, v) => r.assignee === v },
     { key: 'flag', label: 'Flag', options: ['Overdue', 'Escalated'], test: (r, v) => (v === 'Overdue' ? isOverdue(r) : needsEscalation(r)) },
   ];
-  const addComment = () => {
-    if (!current) return;
-    if (!text.trim()) return toast('Write a comment before adding it.', 'error');
-    updateRow('actions', current.id, { comments: [...current.comments, { by: 'You', at: REPORT_DATE, text: text.trim() }] });
-    setText(''); toast('Comment added');
-  };
-
+  const notClosed = actions.filter((a) => a.status !== 'Closed');
   return (
-    <>
-      <PageHeader title="Actions" lede="Every open action with its owner and age. Actions open for more than 14 days show an escalation badge." />
-      <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Tile title="By status"><Bars label="Actions by status" xKey="name" height={170} data={tally(STATUS, (a) => a.status, actions)} series={[{ key: 'Actions', name: 'Actions', color: C.graphite }]} highlight="Open" /></Tile>
-        <Tile title="By category"><Bars label="Actions by category" xKey="name" height={170} data={tally(CATS, (a) => a.category, actions)} series={[{ key: 'Actions', name: 'Actions', color: C.graphite }]} /></Tile>
-        <Tile title="By ageing (not closed)"><Bars label="Open actions by ageing bucket" xKey="name" height={170} data={tally(AGE_BUCKETS, (a) => ageBucket(ageing(a.openDate)), actions.filter((a) => a.status !== 'Closed'))} series={[{ key: 'Actions', name: 'Actions', color: C.graphite }]} highlight="Over 30 days" /></Tile>
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Tile title="By status"><Bars label="Actions by status" xKey="name" height={160} data={tally(STATUS, (a) => a.status, actions)} series={S} highlight="Open" /></Tile>
+        <Tile title="By category"><Bars label="Actions by category" xKey="name" height={160} data={tally(CATS, (a) => a.category, actions)} series={S} /></Tile>
+        <Tile title="By ageing (not closed)"><Bars label="Open actions by ageing bucket" xKey="name" height={160} data={tally(AGE_BUCKETS, (a) => ageBucket(ageing(a.openDate)), notClosed)} series={S} highlight="Over 30 days" /></Tile>
       </div>
-      <Register<ActionItem> entity="actions" noun="action" rows={actions} cols={cols} filters={filters2} searchKeys={['title', 'assignee', 'id', 'category']}
+      <Register<ActionItem> entity="actions" noun="action" rows={actions} cols={cols} filters={filters2} tabs={tabs} searchKeys={['title', 'assignee', 'id', 'category']} titleKey="title"
+        ownerOf={(a) => a.assignee} ageOf={(a) => (a.status === 'Closed' ? 'closed' : `open ${ageing(a.openDate)} days`)} figureOf={(a) => (a.status === 'Closed' ? null : `${ageing(a.openDate)}d`)}
+        statusOf={(a) => (isOverdue(a) ? { label: 'Overdue', tone: 'bad' } : { label: a.status, tone: a.status === 'Closed' ? 'good' : a.status === 'Open' ? 'info' : 'warn' })}
+        closePatch={{ status: 'Closed' }} extra={(a) => <Comments a={a} />}
         makeRow={(d) => ({ id: `A-${Date.now().toString().slice(-5)}`, projectId: pid, title: d.title.trim(), category: d.category || CATS[0], discipline: d.discipline || 'General', assignee: d.assignee || PEOPLE[0],
-          openDate: d.openDate || REPORT_DATE, dueDate: d.dueDate || REPORT_DATE, status: 'Open', comments: [] })}
-        rowActions={(a) => (
-          <>
-            <Button onClick={() => setOpenId(a.id)} aria-label={`Comments on ${a.id}, ${a.comments.length}`}>Comments ({a.comments.length})</Button>
-            {a.status !== 'Closed' && <Button onClick={() => { updateRow('actions', a.id, { status: 'Closed' }); toast('Action closed'); }} aria-label={`Close action ${a.id}`}>Close action</Button>}
-          </>
-        )} />
-      <Drawer open={!!current} onClose={() => setOpenId(null)} title={current ? `${current.id}: comments` : 'Comments'}>
-        {current && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm">{current.title}</p>
-            {current.comments.length ? (
-              <ul className="flex flex-col divide-y divide-line">{current.comments.map((c, i) => <li key={i} className="py-2 text-sm"><p className="text-xs text-graphite">{c.by}, {fmtDate(c.at)}</p><p>{c.text}</p></li>)}</ul>
-            ) : <EmptyState title="No comments yet" hint="Add the first comment to record a decision or update." />}
-            <textarea aria-label="New comment" value={text} onChange={(e) => setText(e.target.value)} rows={3} className={`${inputCls} h-auto py-2`} placeholder="Write a comment" />
-            <Button variant="primary" onClick={addComment}>Add comment</Button>
-          </div>
-        )}
-      </Drawer>
-    </>
+          openDate: d.openDate || REPORT_DATE, dueDate: d.dueDate || REPORT_DATE, status: 'Open', comments: [] })} />
+    </div>
   );
 }

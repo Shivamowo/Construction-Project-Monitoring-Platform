@@ -4,8 +4,8 @@ import { Shell } from '@/components/Shell';
 import { BRAND } from '@/lib/brand';
 import './globals.css';
 
-const barlow = Barlow({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-barlow', display: 'swap' });
-const condensed = Barlow_Condensed({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-condensed', display: 'swap' });
+const barlow = Barlow({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-barlow', display: 'swap' });
+const condensed = Barlow_Condensed({ subsets: ['latin'], weight: ['300', '400', '500'], variable: '--font-condensed', display: 'swap' });
 
 export const metadata: Metadata = { title: `${BRAND.name}: ${BRAND.tagline}`, description: 'One live view of schedule, drawings, procurement, site progress, contractors, risks and actions.' };
 

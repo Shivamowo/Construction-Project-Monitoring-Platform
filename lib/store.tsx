@@ -14,6 +14,7 @@ interface Ctx extends Data {
   updateRow: (entity: Entity, id: string, patch: Record<string, unknown>) => void;
   addRow: (entity: Entity, row: Row) => void;
   auditOpen: boolean; setAuditOpen: (v: boolean) => void;
+  cmd: number; fireCmd: () => void; showFilters: boolean; setShowFilters: (v: boolean) => void;
   toasts: Toast[]; toast: (msg: string, tone?: Toast['tone']) => void;
 }
 
@@ -29,6 +30,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [filters, setF] = useState<Filters>({ projectId: PRIMARY, discipline: 'All', range: 'all', gran: 'Monthly' });
   const [ready, setReady] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
+  const [cmd, setCmd] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+  const fireCmd = useCallback(() => setCmd((c) => c + 1), []);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const seq = useRef(0);
 
@@ -74,7 +78,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const value = useMemo<Ctx>(() => ({ ...data, ready, filters, setFilters, updateRow, addRow, auditOpen, setAuditOpen, toasts, toast }), [data, ready, filters, setFilters, updateRow, addRow, auditOpen, toasts, toast]);
+  const value = useMemo<Ctx>(() => ({ ...data, ready, filters, setFilters, updateRow, addRow, auditOpen, setAuditOpen, cmd, fireCmd, showFilters, setShowFilters, toasts, toast }), [data,cmd,fireCmd,showFilters, ready, filters, setFilters, updateRow, addRow, auditOpen, toasts, toast]);
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }
 
