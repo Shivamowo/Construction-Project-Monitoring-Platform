@@ -41,13 +41,13 @@ export function Palette({ open, onClose }: { open: boolean; onClose: () => void 
         <ul id="pal-list" role="listbox" aria-label="Results">
           {items.map((it, i) => (
             <li key={it.group + it.label} role="presentation">
-              {(i === 0 || items[i - 1].group !== it.group) && <div className="grp">{it.group}</div>}
+              {(i === 0 || items[i - 1].group !== it.group) && <div className="grp caption">{it.group}</div>}
               <button id={`pal-${i}`} type="button" role="option" aria-selected={i === idx} onMouseMove={() => setIdx(i)} onClick={() => go(i)}>
-                <span>{it.label}</span><span className="text-xs" style={{ color: 'var(--muted)' }}>{it.hint}</span>
+                <span>{it.label}</span><span className="caption">{it.hint}</span>
               </button>
             </li>
           ))}
-          {!items.length && <li className="p-4 text-sm" style={{ color: 'var(--muted)' }}>Nothing matches. Try a module or project name.</li>}
+          {!items.length && <li className="small muted p-4">Nothing matches. Try a module or project name.</li>}
         </ul>
       </div>
     </div>

@@ -7,13 +7,13 @@ export function BigStat({ label, value, unit, delta, deltaTone, tone, href, size
   label: string; value: string | number; unit?: string; delta?: string; deltaTone?: Tone; tone?: 'bad' | 'good'; href?: string; size?: 'stat' | 'title-sm';
 }) {
   const num = (
-    <span className={clsx('inline-flex items-baseline', tone && `stat-tone-${tone}`)}>
-      <span className={clsx('numeral', size === 'title-sm' && 'sm')}>{value}</span>
+    <span className={clsx('fig', tone && `t-${tone}`)}>
+      <span className={size === 'stat' ? 'numeral' : 'numeral-sm'}>{value}</span>
       {unit && <span className="unit">{unit}</span>}
     </span>
   );
   return (
-    <div className="flex min-w-0 flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-2">
       <span className="label">{label}</span>
       <div className="flex flex-wrap items-center gap-2">
         {href ? <Link href={href} aria-label={`${label}: ${value} ${unit ?? ''}. Show rows`} className="underline-offset-4 hover:underline">{num}</Link> : num}

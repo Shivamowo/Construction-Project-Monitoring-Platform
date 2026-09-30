@@ -5,7 +5,10 @@ import { ageing } from '@/lib/metrics';
 import { dateShort } from '@/lib/format';
 import { REPORT_DATE } from '@/lib/brand';
 import { Register, type Col, type RegFilter, type RegTab } from '@/components/Register';
-import { AgeingCell, KpiCard, OwnerCell, SegmentedControl } from '@/components/ui';
+import { AgeingCell, KpiCard, KpiRow, OwnerCell, SegmentedControl, Tile } from '@/components/ui';
+import { Bars, C } from '@/components/charts';
+import { WorkloadBar } from '@/components/viz';
+import { AGE_BINS, ageBin } from '@/lib/health';
 import type { Delay } from '@/lib/types';
 
 const ROLES = ['Project team', 'Civil team', 'Site team', 'Commercial', 'Client representative', 'Contractor representative'];
@@ -44,15 +47,27 @@ export default function Delays() {
   ];
   return (
     <>
-      <div className="kpi-grid c4">
-        <KpiCard label="Open delays" value={open.length} rail="critical" href="/delays?status=Open" spark={trends.delays} context={`${delays.reduce((s, d) => s + (d.status === 'Open' ? d.daysLost : 0), 0)} days lost so far`} />
+      <KpiRow n={4}>
+        <KpiCard label="Open delays" value={open.length} rail="critical" href="/delays?status=Open" spark={trends.delays} context={`${open.reduce((s, d) => s + d.daysLost, 0)} days lost so far`} />
         <KpiCard label="Client actions" value={open.filter(isClient).length} rail="caution" context="Open delays owned by the client" />
         <KpiCard label="Contractor actions" value={open.filter(isContractor).length} rail="caution" context="Open delays owned by contractors" />
         <KpiCard label="Average ageing" value={avg} unit="days" rail="critical" spark={trends.ageing} context="Across open delays" />
+      </KpiRow>
+      <div className="grid12 section">
+        <Tile surface title="Owner workload" className="c6" action={<span className="caption">Open delays only</span>}>
+          <WorkloadBar parts={[{ label: 'Client', color: 'var(--text)' }, { label: 'Contractor', color: 'var(--steel)' }, { label: 'Other', color: 'var(--soft)' }]} rows={[
+            { label: 'Open delays', unit: 'delays', values: [open.filter(isClient).length, open.filter(isContractor).length, open.filter((d) => !isClient(d) && !isContractor(d)).length] },
+            { label: 'Days lost', unit: 'days', values: [open.filter(isClient).reduce((s, d) => s + d.daysLost, 0), open.filter(isContractor).reduce((s, d) => s + d.daysLost, 0), open.filter((d) => !isClient(d) && !isContractor(d)).reduce((s, d) => s + d.daysLost, 0)] },
+          ]} />
+        </Tile>
+        <Tile surface title="Ageing of open delays, in days" className="c6">
+          <Bars label={`Open delays by days open: ${AGE_BINS.map((b) => `${b} ${open.filter((d) => ageBin(d.openDate) === b).length}`).join(', ')}`} xKey="name" height={220} labels highlight="Over 60"
+            data={AGE_BINS.map((b) => ({ name: b, Delays: open.filter((d) => ageBin(d.openDate) === b).length }))} series={[{ key: 'Delays', name: 'Open delays', color: C.ink }]} />
+        </Tile>
       </div>
       <Register<Delay> entity="delays" noun="delay" rows={rows} cols={cols} filters={filters2} tabs={tabs} searchKeys={['description', 'person', 'org', 'linked', 'id']} titleKey="description"
         addLabel="Log delay" addedMsg="Delay logged"
-        toolbar={<span className="inline-flex items-center gap-2 text-sm"><span className="label">Owned by</span><SegmentedControl label="Owned by" options={['All', 'Client', 'Contractor'] as const} value={owner} onChange={setOwner} /></span>}
+        toolbar={<span className="inline-flex items-center gap-2"><span className="label">Owned by</span><SegmentedControl label="Owned by" options={['All', 'Client', 'Contractor'] as const} value={owner} onChange={setOwner} /></span>}
         ownerOf={(d) => d.person} ageOf={(d) => (d.status === 'Closed' ? 'closed' : `open ${ageing(d.openDate)} days`)} figureOf={(d) => `${d.daysLost}d`}
         statusOf={(d) => ({ label: d.status, tone: d.status === 'Open' ? 'bad' : 'good' })} closePatch={{ status: 'Closed', closeDate: REPORT_DATE }}
         makeRow={(d) => ({ id: `D-${Date.now().toString().slice(-5)}`, projectId: pid, description: d.description.trim(), person: d.person || ROLES[0], org: d.org.trim(), openDate: d.openDate || REPORT_DATE, closeDate: '',

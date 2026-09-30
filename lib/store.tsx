@@ -9,7 +9,7 @@ export interface Toast { id: number; msg: string; tone: 'ok' | 'error' }
 interface Data { actions: ActionItem[]; risks: Risk[]; delays: Delay[]; dpr: DprRow[]; audit: AuditEntry[] }
 interface Ref {
   projects: Project[]; drawings: { types: (DrawingType & { discipline: string })[]; tracker: DrawingRow[] };
-  procurement: { rows: PoRow[]; categories: { name: string; total: number; planned: number; released: number; pastDue: number }[]; pipeline: { name: string; value: number }[] };
+  procurement: { rows: PoRow[]; categories: { name: string; total: number; planned: number; released: number; pastDue: number }[]; pipeline: { name: string; value: number; pastDue: number }[]; releasePlan: number[] };
   contractors: Awaited<ReturnType<typeof repo.getContractors>>; schedule: Awaited<ReturnType<typeof repo.getSchedule>>;
   outline: [number, number][]; trends: Record<string, number[]>;
 }
@@ -24,10 +24,10 @@ interface Ctx extends Data, Ref {
   toasts: Toast[]; toast: (msg: string, tone?: Toast['tone']) => void;
 }
 
-const KEY = 'sitewise:v2';
+const KEY = 'sitewise:v3';
 export const PRIMARY = repo.PRIMARY;
 export const DISCIPLINES = ['All', 'Civil', 'Structural', 'Mechanical', 'Electrical', 'Instrumentation', 'General'];
-const emptyRef: Ref = { projects: [], drawings: { types: [], tracker: [] }, procurement: { rows: [], categories: [], pipeline: [] }, contractors: { monthly: [], manpower: [], vendors: [], quantities: [] }, schedule: [], outline: [], trends: {} };
+const emptyRef: Ref = { projects: [], drawings: { types: [], tracker: [] }, procurement: { rows: [], categories: [], pipeline: [], releasePlan: [] }, contractors: { monthly: [], manpower: [], vendors: [], quantities: [] }, schedule: [], outline: [], trends: {} };
 const emptyData: Data = { actions: [], risks: [], delays: [], dpr: [], audit: [] };
 const StoreCtx = createContext<Ctx | null>(null);
 const show = (v: unknown) => (Array.isArray(v) ? `${v.length} comments` : String(v ?? ''));

@@ -9,16 +9,16 @@ export interface FilterDef { key: string; label: string; value: string; def: str
 export function FilterCluster({ filters, onClear }: { filters: FilterDef[]; onClear?: () => void }) {
   const active = filters.filter((f) => f.value !== f.def);
   return (
-    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filters">
+    <div className="flex flex-wrap items-end justify-end gap-2" role="group" aria-label="Filters">
       {filters.map((f) => {
         const on = f.value !== f.def;
         return (
           <label key={f.key} className="fpill">
-            <span className="cap">{f.label}{on && <i className="adot" aria-label="filter active" />}</span>
+            <span className="cap">{f.label}{on && <i className="adot" aria-hidden />}</span>
             {f.type === 'date'
               ? <input type="date" value={f.value} onChange={(e) => f.onChange(e.target.value || f.def)} />
               : <select value={f.value} onChange={(e) => f.onChange(e.target.value)}>{f.options?.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}</select>}
-            <span aria-hidden className="chev"><ChevronDown size={16} /></span>
+            <span aria-hidden className="chev"><ChevronDown /></span>
           </label>
         );
       })}

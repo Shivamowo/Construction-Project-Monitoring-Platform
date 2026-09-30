@@ -37,9 +37,11 @@ export const PO_CATEGORIES = [
   { name: 'WHRS', total: 1, planned: 1, released: 1, pastDue: 0 },
 ];
 export const PO_PIPELINE = [
-  { name: 'Not yet planned', value: 4 }, { name: 'Engineering inputs', value: 5 }, { name: 'Tender', value: 8 },
-  { name: 'Technical evaluation', value: 7 }, { name: 'Sent to commercial', value: 8 },
+  { name: 'Not yet planned', value: 4, pastDue: 4 }, { name: 'Engineering inputs', value: 5, pastDue: 4 }, { name: 'Tender', value: 8, pastDue: 8 },
+  { name: 'Technical evaluation', value: 7, pastDue: 7 }, { name: 'Sent to commercial', value: 8, pastDue: 7 },
 ];
+/** Revised release targets for the 32 unreleased POs, per week from the report date. */
+export const RELEASE_PLAN = [4, 6, 3, 5, 2, 4, 1, 3, 0, 2, 1, 1];
 
 export const DISCIPLINE_QTY = [
   { name: 'Concrete cum', unit: 'm³', scope: 121660, drawingPlan: 73806, drawingReceived: 68270, cumPlan: 52500, cumActual: 30679 },
@@ -176,18 +178,18 @@ export const RISKS: Risk[] = [
 ];
 
 // ages 200, 160, 140, 100, 68, 40 days: average of open delays is 118 days
-const D = (n: number, description: string, person: string, org: string, age: number, closeAge: number | null, daysLost: number, linked: string, discipline: string): Delay => ({
-  id: `D-0${n}`, projectId: 'p1', description, person, org, openDate: daysAgo(age), closeDate: closeAge === null ? '' : daysAgo(closeAge), status: closeAge === null ? 'Open' : 'Closed', daysLost, linked, discipline,
+const D = (n: number, description: string, person: string, org: string, age: number, closeAge: number | null, daysLost: number, linked: string, discipline: string, tag?: [string, number]): Delay => ({
+  id: `D-0${n}`, projectId: 'p1', description, person, org, openDate: daysAgo(age), closeDate: closeAge === null ? '' : daysAgo(closeAge), status: closeAge === null ? 'Open' : 'Closed', daysLost, linked, discipline, ...(tag ? { cause: tag[0], criticalDays: tag[1] } : {}),
 });
 export const DELAYS: Delay[] = [
-  D(1, 'Land handover for coal mill area pending', ROLES[4], 'Owner site office', 200, null, 22, 'Building: Coal mill hopper', 'Civil'),
+  D(1, 'Land handover for coal mill area pending', ROLES[4], 'Owner site office', 200, null, 22, 'Building: Coal mill hopper', 'Civil', ['Excavation start', 6]),
   D(2, 'Statutory clearance for crusher pending', ROLES[4], 'State authority', 160, null, 15, 'Building: Limestone crusher', 'Civil'),
   D(3, 'Client drawing approvals slower than plan', ROLES[4], 'Client design cell', 140, null, 12, 'Drawing: Raw mill baghouse', 'Mechanical'),
-  D(4, 'Batching plant output below committed rate', ROLES[5], 'Vardhan Civil Works', 100, null, 9, 'Building: Pre-heater building', 'Civil'),
-  D(5, 'Contractor manpower below plan', ROLES[5], 'Kaveri Infra', 68, null, 11, 'Building: Raw mill building', 'Civil'),
+  D(4, 'Batching plant output below committed rate', ROLES[5], 'Vardhan Civil Works', 100, null, 9, 'Building: Pre-heater building', 'Civil', ['Batching rate', 8]),
+  D(5, 'Contractor manpower below plan', ROLES[5], 'Kaveri Infra', 68, null, 11, 'Building: Raw mill building', 'Civil', ['Manpower', 4]),
   D(6, 'Transformer PO release pending approval', ROLES[5], 'Transformer vendor', 40, null, 8, 'PO: Transformer', 'Electrical'),
-  D(7, 'Water supply interrupted at labour camp', ROLES[2], 'Site services', 90, 70, 3, 'Building: Limestone crusher', 'General'),
-  D(8, 'TMT first lot delivered late', ROLES[3], 'Steel supplier', 75, 55, 5, 'PO: TMT first lot', 'Civil'),
+  D(7, 'Water supply interrupted at labour camp', ROLES[2], 'Site services', 90, 70, 3, 'Building: Limestone crusher', 'General', ['Water supply', 3]),
+  D(8, 'TMT first lot delivered late', ROLES[3], 'Steel supplier', 75, 55, 5, 'PO: TMT first lot', 'Civil', ['Material clearance', 1]),
   D(9, 'Rain stopped concrete pours for two days', ROLES[1], 'Kaveri Infra', 45, 42, 2, 'Building: Cement silo', 'Civil'),
 ];
 

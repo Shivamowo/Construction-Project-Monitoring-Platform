@@ -66,7 +66,7 @@ export function Register<T extends { id: string }>({ entity, noun, rows, cols, f
           onKeyDown={(e) => { if (e.key === 'Enter') commit(r, c, e.currentTarget.value); if (e.key === 'Escape') setEdit(null); }} />
       );
     }
-    return <button type="button" onClick={() => setEdit(k)} aria-label={`Edit ${c.label.toLowerCase()}: ${val}`} className="w-full rounded-full text-left underline decoration-white/30 decoration-dotted underline-offset-4 hover:decoration-white">{view}</button>;
+    return <button type="button" onClick={() => setEdit(k)} aria-label={`Edit ${c.label.toLowerCase()}: ${val}`} className="w-full text-left underline decoration-dotted underline-offset-4" style={{ textDecorationColor: 'rgba(255,255,255,.35)' }}>{view}</button>;
   };
 
   const tc = cols.find((c) => c.key === titleKey)!;
@@ -94,11 +94,11 @@ export function Register<T extends { id: string }>({ entity, noun, rows, cols, f
       </HeaderFilters>
       <FilterBar active={activeFilters} search={{ value: q, onChange: setQ, placeholder: `Search ${noun}s` }}>
         <PillSelect label="Sort by" value={sort.key} onChange={(v) => setSort({ ...sort, key: v })} options={[{ v: '', l: 'Sort: default' }, ...cols.map((c) => ({ v: c.key, l: `Sort: ${c.label.toLowerCase()}` }))]} />
-        <button type="button" onClick={() => setSort({ ...sort, dir: sort.dir === 1 ? -1 : 1 })} aria-label={`Sort direction: ${sort.dir === 1 ? 'ascending' : 'descending'}`} className="icon-btn"><ArrowUpDown size={16} /></button>
+        <button type="button" onClick={() => setSort({ ...sort, dir: sort.dir === 1 ? -1 : 1 })} aria-label={`Sort direction: ${sort.dir === 1 ? 'ascending' : 'descending'}`} className="icon-btn"><ArrowUpDown /></button>
         {toolbar}
-        <Button onClick={exportCsv}><Download size={16} aria-hidden />Export CSV</Button>
+        <Button onClick={exportCsv}><Download aria-hidden />Export CSV</Button>
       </FilterBar>
-      <DarkPanel tabs={tabs.map((t) => ({ id: t.id, label: t.label, count: filtered.filter(t.test).length }))} tab={tab} onTab={setTab}>
+      <DarkPanel title={`${Noun} register`} action={<span className="caption tabular">{shown.length} of {rows.length} shown</span>} tabs={tabs.map((t) => ({ id: t.id, label: t.label, count: filtered.filter(t.test).length }))} tab={tab} onTab={setTab}>
         {!shown.length ? (
           <EmptyState title={`No ${noun}s match. Clear the filters or add a new ${noun}.`} action={{ label: add, onClick: () => setAdding(true) }} />
         ) : (
@@ -109,12 +109,12 @@ export function Register<T extends { id: string }>({ entity, noun, rows, cols, f
             {current && (
               <DetailPane title={editor(current, tc, String(current[titleKey]))} status={statusOf(current)} owner={ownerOf(current)}
                 footer={<>
-                  <span className="flex items-center gap-3 text-sm" style={{ color: 'var(--fog)' }}>
-                    <button type="button" onClick={() => setShowFields(!showFields)} aria-expanded={showFields} className="inline-flex items-center gap-1 underline underline-offset-4"><ChevronDown size={14} className={clsx(showFields ? '' : '-rotate-90')} style={{ transition: 'transform 160ms' }} />{showFields ? 'Hide fields' : 'Show fields'}</button>
-                    {shown.length} of {rows.length} {noun}s shown
+                  <span className="small flex items-center gap-3" style={{ color: 'var(--fog)' }}>
+                    <button type="button" onClick={() => setShowFields(!showFields)} aria-expanded={showFields} className="ic underline underline-offset-4"><ChevronDown className={clsx(showFields ? '' : '-rotate-90')} style={{ transition: 'transform 160ms' }} />{showFields ? 'Hide fields' : 'Show fields'}</button>
+                    
                   </span>
                   <span className="flex gap-2">
-                    <Button variant="dark" onClick={() => setAdding(true)}><Plus size={16} aria-hidden />{add}</Button>
+                    <Button variant="dark" onClick={() => setAdding(true)}><Plus aria-hidden />{add}</Button>
                     {String((current as Record<string, unknown>).status) !== String(closePatch.status) && (
                       <Button variant="primary" onClick={() => { updateRow(entity, current.id, closePatch); toast(`${Noun} closed`); }}>Close {noun}</Button>
                     )}
@@ -129,12 +129,12 @@ export function Register<T extends { id: string }>({ entity, noun, rows, cols, f
                 </div>
                 {extra?.(current)}
                 <div>
-                  <h4 className="mb-2 mt-0 text-sm font-medium">Audit trail</h4>
+                  <h4 className="label mb-2">Audit trail</h4>
                   {trail.length ? (
-                    <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm" style={{ color: 'var(--fog)' }}>
+                    <ul className="small m-0 flex list-none flex-col gap-1 p-0" style={{ color: 'var(--fog)' }}>
                       {trail.map((a) => <li key={a.id}>{a.kind === 'created' ? 'Created' : `${a.field}: “${a.from || 'empty'}” to “${a.to || 'empty'}”`}, {new Date(a.at).toLocaleString('en-GB')}</li>)}
                     </ul>
-                  ) : <p className="m-0 text-sm" style={{ color: 'var(--fog)' }}>No changes recorded for {current.id}. Edit a field to start the trail.</p>}
+                  ) : <p className="small" style={{ color: 'var(--fog)' }}>No changes recorded for {current.id}. Edit a field to start the trail.</p>}
                 </div>
               </DetailPane>
             )}

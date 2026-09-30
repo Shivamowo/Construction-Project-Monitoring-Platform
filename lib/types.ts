@@ -29,6 +29,8 @@ export interface Risk {
 export interface Delay {
   id: string; projectId: string; description: string; person: string; org: string; openDate: string; closeDate: string;
   status: 'Open' | 'Closed'; daysLost: number; linked: string; discipline: string;
+  /** Cause label and the days this item moved the forecast finish (delay bridge). */
+  cause?: string; criticalDays?: number;
 }
 export interface AuditEntry {
   id: string; at: string; entity: string; rowId: string; kind: 'created' | 'updated'; field: string; from: string; to: string;

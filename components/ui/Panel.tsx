@@ -2,6 +2,7 @@
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
 import { Avatar, Chip, type Tone } from './index';
+import { TileHeader } from './TileHeader';
 
 export interface TabDef { id: string; label: string; count?: number }
 
@@ -17,9 +18,10 @@ export function TabNotch({ tabs, value, onChange }: { tabs: TabDef[]; value: str
   );
 }
 
-export function DarkPanel({ tabs, tab, onTab, children, className }: { tabs?: TabDef[]; tab?: string; onTab?: (id: string) => void; children: ReactNode; className?: string }) {
+export function DarkPanel({ title, action, tabs, tab, onTab, children, className }: { title?: ReactNode; action?: ReactNode; tabs?: TabDef[]; tab?: string; onTab?: (id: string) => void; children: ReactNode; className?: string }) {
   return (
     <section className={clsx('dark-panel', className)}>
+      {title && <TileHeader title={title}>{action}</TileHeader>}
       {tabs && <TabNotch tabs={tabs} value={tab ?? tabs[0].id} onChange={onTab ?? (() => {})} />}
       {children}
     </section>
@@ -31,15 +33,13 @@ export function MasterRow({ selected, onClick, title, id, age, owner, status, fi
 }) {
   return (
     <button type="button" onClick={onClick} aria-current={selected} className={clsx('row', selected && 'sel')}>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{title}</span>
-        <span className="mt-1 flex flex-wrap items-center gap-2 text-xs" style={{ color: 'var(--fog)' }}>
-          <span>{id}</span>{age && <span>{age}</span>}{owner && <Avatar name={owner} size={24} />}
-        </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-2">
+        <span className="small w5 block truncate">{title}</span>
+        <span className="caption flex flex-wrap items-center gap-2"><span className="tabular">{id}</span>{age && <span>{age}</span>}{owner && <Avatar name={owner} />}</span>
       </span>
-      <span className="flex shrink-0 flex-col items-end gap-1">
+      <span className="flex shrink-0 flex-col items-end gap-2">
         {status && <Chip tone={status.tone}>{status.label}</Chip>}
-        {figure && <span className="text-lg font-light">{figure}</span>}
+        {figure && <span className="fig-r tabular">{figure}</span>}
       </span>
     </button>
   );
@@ -48,8 +48,8 @@ export function MasterRow({ selected, onClick, title, id, age, owner, status, fi
 export function InnerTile({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return (
     <div className={clsx('inner', wide && 'sm:col-span-2')}>
-      <div className="k">{label}</div>
-      <div className="v">{children}</div>
+      <div className="caption">{label}</div>
+      <div className="v tabular">{children}</div>
     </div>
   );
 }
@@ -57,13 +57,10 @@ export function InnerTile({ label, children, wide }: { label: string; children: 
 export function DetailPane({ title, status, owner, footer, children }: { title: ReactNode; status?: { label: string; tone: Tone }; owner?: string; footer?: ReactNode; children: ReactNode }) {
   return (
     <div className="detail">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <h3 className="m-0 min-w-0 flex-1 text-lg font-medium">{title}</h3>
-        <div className="flex items-center gap-2">
-          {status && <Chip tone={status.tone}>{status.label}</Chip>}
-          {owner && <span className="flex items-center gap-2 text-sm"><Avatar name={owner} size={28} />{owner}</span>}
-        </div>
-      </header>
+      <TileHeader as="h3" title={title}>
+        {status && <Chip tone={status.tone}>{status.label}</Chip>}
+        {owner && <span className="small ic"><Avatar name={owner} />{owner}</span>}
+      </TileHeader>
       {children}
       {footer && <footer className="foot">{footer}</footer>}
     </div>

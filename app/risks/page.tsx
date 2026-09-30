@@ -1,13 +1,14 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
 import { useScoped } from '@/lib/store';
 import { ageing } from '@/lib/metrics';
 import { dateShort } from '@/lib/format';
 import { REPORT_DATE } from '@/lib/brand';
-import { C, Donut } from '@/components/charts';
+import { Bars, C } from '@/components/charts';
+import { HeatGrid } from '@/components/viz';
+import { AGE_BINS, ageBin } from '@/lib/health';
 import { Register, type Col, type RegFilter, type RegTab } from '@/components/Register';
-import { Button, KpiCard, OwnerCell, StatusChip, StripeBar, Tile, inputCls, type Tone } from '@/components/ui';
+import { Button, KpiCard, KpiRow, OwnerCell, StatusChip, Tile, inputCls, type Tone } from '@/components/ui';
 import type { Risk } from '@/lib/types';
 
 const RATING: Risk['rating'][] = ['High', 'Medium', 'Low'];
@@ -15,15 +16,14 @@ const STATUS: Risk['status'][] = ['Open', 'Mitigating', 'Closed'];
 const CATS = ['Construction', 'Procurement', 'Commercial'];
 const ROLES = ['Project team', 'Civil team', 'Site team', 'Commercial', 'Client representative', 'Contractor representative'];
 const tone = (r: string): Tone => (r === 'High' ? 'bad' : r === 'Medium' ? 'warn' : 'good');
-const CAT_COL: Record<string, string> = { Construction: C.ink, Procurement: C.steel, Commercial: C.tint };
 
 function Mitigation({ r }: { r: Risk }) {
   const { updateRow, toast } = useScoped();
   const [text, setText] = useState(r.mitigation);
   return (
     <div>
-      <h4 className="mb-2 mt-0 text-sm font-medium">Mitigation plan</h4>
-      <textarea aria-label="Mitigation plan" rows={3} value={text} onChange={(e) => setText(e.target.value)} className={`${inputCls} h-auto py-3`} style={{ borderRadius: 16 }} />
+      <h4 className="label mb-2">Mitigation plan</h4>
+      <textarea aria-label="Mitigation plan" rows={3} value={text} onChange={(e) => setText(e.target.value)} className={inputCls} />
       <div className="mt-2"><Button variant="dark" onClick={() => { updateRow('risks', r.id, { mitigation: text.trim() }); toast('Mitigation saved'); }}>Save mitigation</Button></div>
     </div>
   );
@@ -58,25 +58,20 @@ export default function Risks() {
   ];
   return (
     <>
-      <div className="kpi-grid c3">
+      <KpiRow n={3}>
         <KpiCard label="Open risks" value={open.length} rail="neutral" href="/risks?status=Not%20closed" spark={trends.risks} context={`${risks.length} risks logged`} />
         <KpiCard label="High" value={high} rail="critical" href="/risks?status=Not%20closed&rating=High" context="Needs a mitigation owner" />
         <KpiCard label="Medium" value={med} rail="caution" href="/risks?status=Not%20closed&rating=Medium" context="Monitor weekly" />
-      </div>
-      <div className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Tile surface title="By category">
-          <Donut dark={false} unit="open risks" total={open.length} data={CATS.map((c) => ({ name: c, value: open.filter((r) => r.category === c).length, color: CAT_COL[c] }))} href={(n) => `/risks?category=${n}`} />
+      </KpiRow>
+      <div className="grid12 section">
+        <Tile surface title="Open risks by rating and category" className="c7" action={<span className="caption">Select a square to filter the register</span>}>
+          <HeatGrid rows={RATING} cols={CATS} count={(r, c) => open.filter((x) => x.rating === r && x.category === c).length} tone={(r) => (r === 'High' ? '#B9251C' : r === 'Medium' ? '#E08A1E' : '#168736')}
+            href={(r, c) => `/risks?status=Not%20closed&rating=${r}&category=${c}`} />
+          <p className="caption mt-4">{high} of {open.length} open risks are rated High. The oldest open risk has been open {open.length ? Math.max(...open.map((r) => ageing(r.openDate))) : 0} days.</p>
         </Tile>
-        <Tile surface title="Exposure">
-          <div className="flex flex-wrap gap-2" role="list" aria-label="Exposure by rating">
-            <Link href="/risks?status=Not%20closed&rating=High" role="listitem" className="chip chip-bad">High {high}</Link>
-            <Link href="/risks?status=Not%20closed&rating=Medium" role="listitem" className="chip chip-warn">Medium {med}</Link>
-          </div>
-          <div className="mt-6 flex flex-col gap-4">
-            <div><div className="mb-1 flex justify-between text-sm"><span>High</span><span>{high} of {open.length}</span></div><StripeBar label="High risks share of open risks" value={open.length ? (high / open.length) * 100 : 0} color="bad" /></div>
-            <div><div className="mb-1 flex justify-between text-sm"><span>Medium</span><span>{med} of {open.length}</span></div><StripeBar label="Medium risks share of open risks" value={open.length ? (med / open.length) * 100 : 0} color="warn" /></div>
-          </div>
-          <p className="ctx mt-4 max-w-[60ch]">{high} of {open.length} open risks are rated High. The oldest open risk has been open {open.length ? Math.max(...open.map((r) => ageing(r.openDate))) : 0} days.</p>
+        <Tile surface title="Ageing of open risks, in days" className="c5">
+          <Bars label={`Open risks by days open: ${AGE_BINS.map((b) => `${b} ${open.filter((r) => ageBin(r.openDate) === b).length}`).join(', ')}`} xKey="name" height={220} labels highlight="Over 60"
+            data={AGE_BINS.map((b) => ({ name: b, Risks: open.filter((r) => ageBin(r.openDate) === b).length }))} series={[{ key: 'Risks', name: 'Open risks', color: C.ink }]} />
         </Tile>
       </div>
       <Register<Risk> entity="risks" noun="risk" rows={risks} cols={cols} filters={filters2} tabs={tabs} searchKeys={['title', 'owner', 'mitigation', 'id', 'link']} titleKey="title"

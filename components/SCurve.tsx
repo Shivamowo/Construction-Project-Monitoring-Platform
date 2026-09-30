@@ -31,24 +31,24 @@ export function SCurve() {
   }, [filters.range, filters.gran, schedule]);
 
   const anim = { isAnimationActive: !reduced && !drawn, animationDuration: DRAW_MS, animationEasing: 'ease-out' as const };
-  const tick = { fill: '#C9CDD8', fontSize: 12 };
+  const tick = { fill: '#C9CDD8' };
   return (
     <div>
-      <p className="mb-4 max-w-[60ch] text-sm text-fog">
+      <p className="small muted mb-4">
         At the report date, actual progress is {cumActual}% against a plan of {cumPlanAt}%. The yellow band is the gap of {Math.round((cumPlanAt - cumActual) * 10) / 10} points.
       </p>
-      <ChartLegend dark items={[
+      <ChartLegend items={[
         { label: 'Monthly plan', color: '#4B4B5A' }, { label: 'Monthly actual', color: '#747480' },
         { label: 'Cumulative plan', color: '#FFFFFF', line: true, dashed: true }, { label: 'Cumulative actual', color: YEL, line: true }, { label: 'Gap to plan', color: 'rgba(255,230,0,0.2)' },
       ]} />
       <div role="img" aria-label={`S-curve. Cumulative plan ${cumPlanAt} percent, cumulative actual ${cumActual} percent at report date.`} className="h-[340px] sm:h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={rows} margin={{ top: 32, right: 8, left: -12, bottom: 0 }}>
+          <ComposedChart data={rows} margin={{ top: 32, right: 0, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.12)" vertical={false} />
             <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={16} />
             <YAxis yAxisId="m" hide domain={[0, 40]} />
-            <YAxis yAxisId="c" orientation="right" tick={tick} tickLine={false} axisLine={false} unit="%" domain={[0, 100]} />
-            <Tooltip contentStyle={{ border: 'none', borderRadius: 12, boxShadow: 'none', fontSize: 12, background: '#1F1F27', color: '#fff' }} itemStyle={{ color: '#fff' }} formatter={(v, n) => [`${v}%`, n]} />
+            <YAxis yAxisId="c" orientation="right" width={44} tick={tick} tickLine={false} axisLine={false} unit="%" domain={[0, 100]} />
+            <Tooltip wrapperClassName="tabular" formatter={(v, n) => [`${v}%`, n]} />
             <Area yAxisId="c" dataKey="gapBase" stackId="gap" stroke="none" fill="transparent" name="Base" tooltipType="none" {...anim} />
             <Area yAxisId="c" dataKey="gapSize" stackId="gap" stroke="none" fill={YEL} fillOpacity={0.2} name="Gap to plan" tooltipType="none" {...anim} />
             <Bar yAxisId="m" dataKey="plan" name="Monthly plan" fill="#4B4B5A" radius={[6, 6, 0, 0]} isAnimationActive={false} maxBarSize={18} />
@@ -56,7 +56,7 @@ export function SCurve() {
             <Line yAxisId="c" type="monotone" dataKey="cumPlan" name="Cumulative plan" stroke="#FFFFFF" strokeWidth={2} strokeDasharray="6 4" dot={false} {...anim} />
             <Line yAxisId="c" type="monotone" dataKey="cumActual" name="Cumulative actual" stroke={YEL} strokeWidth={4} dot={false} connectNulls={false} {...anim} />
             {reportLabel && <ReferenceLine yAxisId="c" x={reportLabel} stroke="rgba(255,255,255,0.6)" strokeWidth={1.5} label={({ viewBox }: { viewBox: { x: number; y: number } }) => (
-              <g transform={`translate(${viewBox.x - 44},${viewBox.y - 26})`}><rect width="88" height="22" rx="11" fill={YEL} /><text x="44" y="15" textAnchor="middle" fill="#2E2E38" style={{ fontSize: 12, fontWeight: 500 }}>Report date</text></g>
+              <g transform={`translate(${viewBox.x - 44},${viewBox.y - 26})`}><rect width="88" height="22" rx="11" fill={YEL} /><text x="44" y="15" textAnchor="middle" fill="#2E2E38" className="chart-chip">Report date</text></g>
             )} />}
           </ComposedChart>
         </ResponsiveContainer>

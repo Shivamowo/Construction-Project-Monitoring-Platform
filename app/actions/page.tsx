@@ -6,7 +6,10 @@ import { ageing, isOverdue } from '@/lib/metrics';
 import { dateShort } from '@/lib/format';
 import { REPORT_DATE } from '@/lib/brand';
 import { Register, type Col, type RegFilter, type RegTab } from '@/components/Register';
-import { AgeingCell, Button, KpiCard, OwnerCell, inputCls } from '@/components/ui';
+import { AgeingCell, Button, KpiCard, KpiRow, OwnerCell, Tile, inputCls } from '@/components/ui';
+import { Bars, C } from '@/components/charts';
+import { AGE_BINS, ageBin } from '@/lib/health';
+import { WorkloadBar } from '@/components/viz';
 import type { ActionItem } from '@/lib/types';
 
 const ROLES = ['Project team', 'Civil team', 'Site team', 'Commercial', 'Client representative', 'Contractor representative'];
@@ -24,10 +27,10 @@ function Comments({ a }: { a: ActionItem }) {
   };
   return (
     <div>
-      <h4 className="mb-2 mt-0 text-sm font-medium">Comments ({a.comments.length})</h4>
+      <h4 className="label mb-2">Comments ({a.comments.length})</h4>
       {a.comments.length ? (
-        <ul className="mb-3 mt-0 flex list-none flex-col gap-2 p-0">{a.comments.map((c, i) => <li key={i} className="inner text-sm"><span className="text-xs" style={{ color: 'var(--fog)' }}>{c.by}, {dateShort(c.at)}</span><p className="m-0">{c.text}</p></li>)}</ul>
-      ) : <p className="mb-3 mt-0 text-sm" style={{ color: 'var(--fog)' }}>No comments yet. Add one to record a decision or update.</p>}
+        <ul className="mb-3 mt-0 flex list-none flex-col gap-2 p-0">{a.comments.map((c, i) => <li key={i} className="inner small"><span className="caption tabular">{c.by}, {dateShort(c.at)}</span><p>{c.text}</p></li>)}</ul>
+      ) : <p className="small mb-3" style={{ color: 'var(--fog)' }}>No comments yet. Add one to record a decision or update.</p>}
       <div className="flex gap-2">
         <input aria-label="New comment" value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a comment" className={inputCls} />
         <Button variant="dark" onClick={add}>Add comment</Button>
@@ -63,15 +66,23 @@ export default function Actions() {
   ];
   return (
     <>
-      <div className="kpi-grid c4">
+      <KpiRow n={4}>
         <KpiCard label="Open actions" value={open.length} rail="neutral" href="/actions?status=Not%20closed" spark={trends.actions} context={`${actions.length} actions in total`} />
         <KpiCard label="Overdue over 30 days" value={actions.filter(isOverdue).length} rail="critical" href="/actions?status=Overdue" context="Open more than 30 days" />
         <KpiCard label="Closed this month" value={actions.filter((a) => a.status === 'Closed' && a.closedDate.slice(0, 7) === month).length} rail="good" href="/actions?status=Closed" context="Closed in September 2026" />
-        <div className="tile-white kpi" style={{ ['--rail' as string]: '#188CE5' }}>
-          <div className="flex flex-col gap-2"><span className="label">Open by category</span>
-            <div className="flex flex-wrap gap-2">{CATS.map((c) => <Link key={c} href={`/actions?category=${c}`} className="chip chip-info">{c} {open.filter((a) => a.category === c).length}</Link>)}</div>
-          </div>
-        </div>
+        <KpiCard label="Open by category" rail="neutral" context="Select a category to filter">
+          <span className="flex flex-wrap gap-2">{CATS.map((c) => <Link key={c} href={`/actions?category=${c}`} className="chip chip-info tabular">{c} {open.filter((a) => a.category === c).length}</Link>)}</span>
+        </KpiCard>
+      </KpiRow>
+      <div className="grid12 section">
+        <Tile surface title="Ageing of open actions, in days" className="c7" action={<span className="caption">Over 30 days counts as overdue</span>}>
+          <Bars label={`Open actions by days open: ${AGE_BINS.map((b) => `${b} ${open.filter((a) => ageBin(a.openDate) === b).length}`).join(', ')}`} xKey="name" height={220} labels highlight="Over 60"
+            data={AGE_BINS.map((b) => ({ name: b, Actions: open.filter((a) => ageBin(a.openDate) === b).length }))} series={[{ key: 'Actions', name: 'Open actions', color: C.ink }]} />
+        </Tile>
+        <Tile surface title="Open actions by owner" className="c5">
+          <WorkloadBar parts={[{ label: 'Open 30 days or less', color: 'var(--steel)' }, { label: 'Open over 30 days', color: 'var(--red)' }]}
+            rows={ROLES.map((r) => ({ label: r, unit: 'open', values: [open.filter((a) => a.assignee === r && !isOverdue(a)).length, open.filter((a) => a.assignee === r && isOverdue(a)).length] })).filter((r) => r.values[0] + r.values[1] > 0)} />
+        </Tile>
       </div>
       <Register<ActionItem> entity="actions" noun="action" rows={actions} cols={cols} filters={filters2} tabs={tabs} searchKeys={['title', 'assignee', 'id', 'category']} titleKey="title"
         ownerOf={(a) => a.assignee} ageOf={(a) => (a.status === 'Closed' ? 'closed' : `open ${ageing(a.openDate)} days`)} figureOf={(a) => (a.status === 'Closed' ? null : `${ageing(a.openDate)}d`)}
