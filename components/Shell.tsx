@@ -61,13 +61,13 @@ function Capsule({ path }: { path: string }) {
     return () => cancelAnimationFrame(t);
   }, [idx]);
   return (
-    <nav aria-label="Main" className="relative flex shrink-0 rounded-full bg-panel p-1.5">
-      {pill && <span aria-hidden className="absolute top-1.5 h-10 rounded-full bg-brand" style={{ left: pill.left, width: pill.width, transition: ready && !reduced ? 'left 150ms ease, width 150ms ease' : 'none' }} />}
+    <nav aria-label="Main" className="capsule slide shrink-0">
+      {pill && <span aria-hidden className="slider" style={{ left: pill.left, width: pill.width, transition: ready && !reduced ? 'left 150ms ease, width 150ms ease' : 'none' }} />}
       {MAIN.map(({ href, label, icon: Icon }, i) => {
         const on = i === idx;
         return (
           <Link key={href} href={href} ref={(el) => { refs.current[i] = el; }} aria-current={on ? 'page' : undefined}
-            className={clsx('relative z-10 flex h-10 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-medium', on ? 'text-ink' : 'text-white hover:bg-white/10')}>
+            style={on ? { color: 'var(--text)' } : undefined}>
             <Icon size={18} aria-hidden fill={on ? 'currentColor' : 'none'} />{label}
           </Link>
         );
@@ -95,8 +95,8 @@ function Frame({ children }: { children: ReactNode }) {
   const primary = PRIMARY[path];
 
   return (
-    <div className="mx-auto max-w-[1440px] p-4 md:p-6">
-      <div className="rounded-3xl bg-canvas p-4 md:p-6">
+    <div className="page">
+      <div>
         <div className="flex flex-wrap items-center gap-3">
           <Link href="/" aria-label="Sitewise home" className="rounded-full px-1"><Logo /></Link>
           <div className="order-3 -mx-1 flex w-full items-center gap-3 overflow-x-auto p-1 md:order-2 md:w-auto md:overflow-visible md:p-0">
@@ -106,29 +106,29 @@ function Frame({ children }: { children: ReactNode }) {
                 const on = path.startsWith(href), n = badge[href];
                 return (
                   <div key={href} className="group relative">
-                    <Link href={href} aria-label={n ? `${label}, ${n}` : label} aria-current={on ? 'page' : undefined} className={clsx('relative flex h-10 w-10 items-center justify-center rounded-full', on ? 'bg-brand' : 'bg-surface hover:bg-white/60')}>
+                    <Link href={href} aria-label={n ? `${label}, ${n}` : label} aria-current={on ? 'page' : undefined} className={clsx('icon-btn', on && 'on')}>
                       <Icon size={18} aria-hidden fill={on ? 'currentColor' : 'none'} />
-                      {!!n && <span aria-hidden className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-panel px-1 text-xs text-white">{n}</span>}
+                      {!!n && <span aria-hidden className="badge">{n}</span>}
                     </Link>
-                    <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-full bg-panel px-3 py-1 text-xs text-white group-focus-within:block group-hover:block">{label}</span>
+                    <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 text-xs group-focus-within:block group-hover:block" style={{ background: "var(--panel)", color: "#fff" }}>{label}</span>
                   </div>
                 );
               })}
             </div>
           </div>
           <div className="order-2 ml-auto flex items-center gap-2 md:order-3">
-            <Link href="/actions?flag=Overdue" aria-label={overdue ? `${overdue} overdue actions` : 'No overdue actions'} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-surface hover:bg-white/60">
-              <Bell size={18} aria-hidden />{overdue > 0 && <span aria-hidden className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-bad" />}
+            <Link href="/actions?flag=Overdue" aria-label={overdue ? `${overdue} overdue actions` : 'No overdue actions'} className="icon-btn">
+              <Bell size={18} aria-hidden />{overdue > 0 && <span aria-hidden className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full" style={{ background: "var(--red)" }} />}
             </Link>
             <PillSelect label="Project" value={filters.projectId} onChange={(v) => setFilters({ projectId: v })} options={[{ v: 'all', l: 'All projects' }, ...PROJECTS.map((p) => ({ v: p.id, l: p.name }))]} />
-            <Avatar name="Project Owner" size={40} />
+            <Avatar name="Project Owner" size={44} />
           </div>
         </div>
 
         <div className="mb-6 mt-8 flex flex-wrap items-center gap-3">
-          {path !== '/' && <button type="button" onClick={() => router.push('/')} aria-label="Back to portfolio" className="flex h-10 w-10 items-center justify-center rounded-full bg-surface hover:bg-white/60"><ChevronLeft size={20} /></button>}
-          <h1 className="min-w-0 flex-1 font-display text-title-sm font-light md:text-title">{TITLES[path] ?? 'Sitewise'}</h1>
-          <button type="button" onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters} aria-label="Filters" className={clsx('flex h-10 w-10 items-center justify-center rounded-full', showFilters ? 'bg-brand' : 'bg-surface hover:bg-white/60')}><SlidersHorizontal size={18} /></button>
+          {path !== '/' && <button type="button" onClick={() => router.push('/')} aria-label="Back to portfolio" className="icon-btn"><ChevronLeft size={20} /></button>}
+          <h1 className="title min-w-0 flex-1">{TITLES[path] ?? 'Sitewise'}</h1>
+          <button type="button" onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters} aria-label="Filters" className={clsx('icon-btn', showFilters && 'on')}><SlidersHorizontal size={18} /></button>
           <Button variant="primary" onClick={primary ? fireCmd : exportProjects}>{primary ?? 'Export report'}</Button>
         </div>
         {showFilters && (

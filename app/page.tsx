@@ -40,8 +40,8 @@ export default function Portfolio() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Tile className="lg:col-span-2">
+      <div className="split">
+        <Tile>
           <p className="mb-4 text-base font-medium">{active.name}</p>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <BigStat label="Plan" value={active.planPct} unit="%" href="/scorecard" />
@@ -86,7 +86,7 @@ export default function Portfolio() {
       </div>
 
       <DarkPanel tabs={[{ id: 'all', label: 'All projects', count: PROJECTS.length }, ...(['Delay', 'At risk', 'On track'] as Status[]).map((s) => ({ id: s, label: s, count: PROJECTS.filter((p) => p.status === s).length }))]} tab={tab} onTab={setTab}>
-        <div className="grid gap-4 lg:grid-cols-[2fr_3fr]">
+        <div className="md-grid">
           <ul className="flex flex-col gap-2" aria-label="Projects">
             {list.map((p) => <li key={p.id}><MasterRow selected={p.id === sel?.id} onClick={() => setFilters({ projectId: p.id })} title={p.name} id={p.state} age={`forecast ${fmtDate(p.forecastFinish)}`} status={{ label: p.status, tone: statusTone(p.status) }} figure={`${p.actualPct}%`} />
             </li>)}
@@ -96,10 +96,10 @@ export default function Portfolio() {
             <DetailPane title={sel.name} status={{ label: sel.status, tone: statusTone(sel.status) }}
               footer={<><span className="text-sm text-fog">Actual {sel.actualPct}% against plan {sel.planPct}%</span><Link href="/scorecard" onClick={() => setFilters({ projectId: sel.id })} className="inline-flex h-10 items-center rounded-full bg-brand px-5 text-sm font-medium text-ink">Open scorecard</Link></>}>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg bg-white/10 p-3">
+                <div className="inner">
                   <Donut total={PROJECTS.length} data={STATUSES.map((s) => ({ name: s, value: PROJECTS.filter((p) => p.status === s).length, color: SCOL[s] }))} href={(n) => `/?status=${encodeURIComponent(n)}`} />
                 </div>
-                <div className="grid grid-cols-2 gap-3 rounded-lg bg-white/10 p-3">
+                <div className="grid grid-cols-2 gap-3 inner">
                   <BigStat size="title-sm" label="Plan" value={sel.planPct} unit="%" />
                   <BigStat size="title-sm" label="Actual" value={sel.actualPct} unit="%" />
                   <BigStat size="title-sm" label="Variance" value={v > 0 ? `+${v}` : v} unit="days" tone={v > 0 ? 'bad' : 'good'} />

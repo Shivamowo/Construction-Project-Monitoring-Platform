@@ -21,8 +21,10 @@ export function Bars({ data, xKey, series, height = 200, highlight, label, horiz
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 8, right: 8, left: horizontal ? 8 : -12, bottom: 0 }}>
             {!horizontal && <CartesianGrid stroke={C.line} vertical={false} />}
-            {horizontal ? <><XAxis type="number" tick={tick} tickLine={false} axisLine={false} /><YAxis type="category" dataKey={xKey} tick={tick} tickLine={false} axisLine={false} width={120} /></> :
-              <><XAxis dataKey={xKey} tick={tick} tickLine={false} axisLine={false} interval={0} /><YAxis tick={tick} tickLine={false} axisLine={false} tickFormatter={(v) => fmtNum(v)} /></>}
+            {horizontal && <XAxis type="number" tick={tick} tickLine={false} axisLine={false} />}
+            {horizontal && <YAxis type="category" dataKey={xKey} tick={tick} tickLine={false} axisLine={false} width={120} />}
+            {!horizontal && <XAxis dataKey={xKey} tick={tick} tickLine={false} axisLine={false} interval={0} angle={data.length > 4 ? -30 : 0} textAnchor={data.length > 4 ? 'end' : 'middle'} height={data.length > 4 ? 52 : 30} />}
+            {!horizontal && <YAxis tick={tick} tickLine={false} axisLine={false} tickFormatter={(v) => fmtNum(v)} />}
             <Tooltip {...tip} formatter={(v) => `${fmtNum(Number(v))}${unit}`} />
             {series.map((s, si) => (
               <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]} isAnimationActive={false} maxBarSize={32}>
@@ -60,7 +62,7 @@ export function Donut({ data, total, href }: { data: { name: string; value: numb
   let off = 0;
   return (
     <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-      <svg viewBox="0 0 140 140" className="h-36 w-36 shrink-0" role="img" aria-label={`Projects by status: ${data.map((d) => `${d.value} ${d.name}`).join(', ')}`}>
+      <svg viewBox="0 0 140 140" className="shrink-0" style={{ height: 220, width: 220 }} role="img" aria-label={`Projects by status: ${data.map((d) => `${d.value} ${d.name}`).join(', ')}`}>
         <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="16" />
         {data.map((d) => {
           const len = total ? (d.value / total) * c : 0;
@@ -74,7 +76,7 @@ export function Donut({ data, total, href }: { data: { name: string; value: numb
       <ul className="w-full text-sm">
         {data.map((d) => {
           const inner = <><span aria-hidden className="h-3 w-3 shrink-0 rounded-full" style={{ background: d.color }} /><span className="flex-1">{d.name}</span><span className="font-medium">{d.value}</span></>;
-          return <li key={d.name}>{href ? <Link href={href(d.name)} className="flex items-center gap-2 rounded-full px-2 py-1.5 hover:bg-white/10">{inner}</Link> : <div className="flex items-center gap-2 px-2 py-1.5">{inner}</div>}</li>;
+          return <li key={d.name}>{href ? <Link href={href(d.name)} className="flex items-center gap-2 rounded-full px-2 py-1.5">{inner}</Link> : <div className="flex items-center gap-2 px-2 py-1.5">{inner}</div>}</li>;
         })}
       </ul>
     </div>

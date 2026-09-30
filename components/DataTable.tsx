@@ -19,7 +19,7 @@ export function DataTable<T>({ cols, rows, rowKey, caption, empty, maxH = 'max-h
   }, [rows, sort, cols]);
   if (!rows.length && empty) return <>{empty}</>;
   return (
-    <div className={clsx('overflow-auto rounded-xl bg-surface', maxH)}>
+    <div className={clsx('tile-white overflow-auto !p-0', maxH)}>
       <table className="tbl w-full">
         <caption className="sr-only">{caption}</caption>
         <thead>

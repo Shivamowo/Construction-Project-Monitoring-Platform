@@ -27,11 +27,11 @@ function Comments({ a }: { a: ActionItem }) {
     <div>
       <h4 className="mb-2 text-sm font-medium">Comments ({a.comments.length})</h4>
       {a.comments.length ? (
-        <ul className="mb-3 flex flex-col gap-2">{a.comments.map((c, i) => <li key={i} className="rounded-lg bg-white/10 p-3 text-sm"><span className="text-xs text-fog">{c.by}, {fmtDate(c.at)}</span><p>{c.text}</p></li>)}</ul>
+        <ul className="mb-3 flex flex-col gap-2">{a.comments.map((c, i) => <li key={i} className="inner text-sm"><span className="text-xs text-fog">{c.by}, {fmtDate(c.at)}</span><p>{c.text}</p></li>)}</ul>
       ) : <p className="mb-3 text-sm text-fog">No comments yet. Add one to record a decision or update.</p>}
       <div className="flex gap-2">
         <input aria-label="New comment" value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a comment" className={inputCls} />
-        <Button onClick={add} className="!bg-white/15 !text-white">Add comment</Button>
+        <Button variant="dark" onClick={add}>Add comment</Button>
       </div>
     </div>
   );

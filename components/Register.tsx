@@ -98,7 +98,7 @@ export function Register<T extends { id: string }>({ entity, noun, rows, cols, f
         {!shown.length ? (
           <EmptyState title={`No ${noun}s match. Clear the filters or add a new ${noun}.`} action={{ label: `Add ${noun}`, onClick: () => setAdding(true) }} />
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[2fr_3fr]">
+          <div className="md-grid">
             <ul className="flex max-h-[640px] flex-col gap-2 overflow-y-auto pr-1" aria-label={`${Noun} list`}>
               {shown.map((r) => <li key={r.id}><MasterRow selected={r.id === current?.id} onClick={() => setSel(r.id)} title={String(r[titleKey])} id={r.id} age={ageOf(r)} owner={ownerOf(r)} status={statusOf(r)} figure={figureOf?.(r)} /></li>)}
             </ul>
@@ -107,7 +107,7 @@ export function Register<T extends { id: string }>({ entity, noun, rows, cols, f
                 footer={<>
                   <span className="text-sm text-fog">{shown.length} of {rows.length} {noun}s shown</span>
                   <span className="flex gap-2">
-                    <Button onClick={() => setAdding(true)} className="!bg-white/15 !text-white"><Plus size={16} aria-hidden />Add {noun}</Button>
+                    <Button variant="dark" onClick={() => setAdding(true)}><Plus size={16} aria-hidden />Add {noun}</Button>
                     {String((current as Record<string, unknown>).status) !== String(closePatch.status) && (
                       <Button variant="primary" onClick={() => { updateRow(entity, current.id, closePatch); toast(`${Noun} closed`); }}>Close {noun}</Button>
                     )}

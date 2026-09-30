@@ -56,7 +56,7 @@ export default function Procurement() {
       </FilterBar>
       <DarkPanel tabs={tabs.map((t) => ({ id: t.id, label: t.label, count: base.filter(t.test).length }))} tab={tab} onTab={setTab}>
         {!list.length ? <EmptyState title="No packages match. Clear the filters to see every package." action={{ label: 'Clear filters', onClick: () => { setCrit(''); setQ(''); setTab('all'); } }} /> : (
-          <div className="grid gap-4 lg:grid-cols-[2fr_3fr]">
+          <div className="md-grid">
             <ul className="flex max-h-[640px] flex-col gap-2 overflow-y-auto pr-1" aria-label="Packages">
               {list.map((p) => <li key={p.id}><MasterRow selected={p.id === cur?.id} onClick={() => setSel(p.id)} title={p.pkg} id={p.category}
                 status={poReleased(p) ? { label: 'Released', tone: 'good' } : poDelayed(p) ? { label: 'Delayed', tone: 'bad' } : { label: 'Pending', tone: 'warn' }} figure={p.critical ? 'Critical' : undefined} /></li>)}
