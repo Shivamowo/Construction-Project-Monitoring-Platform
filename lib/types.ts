@@ -2,7 +2,7 @@ export type Status = 'On track' | 'At risk' | 'Delay' | 'Not started';
 export type Gran = 'Weekly' | 'Monthly';
 
 export interface Project {
-  id: string; name: string; state: string; lon: number; lat: number; status: Status;
+  id: string; name: string; state: string; lon: number; lat: number; status: Status; phase: 'Active' | 'Planned';
   planPct: number; actualPct: number; start: string; execStart: string; baselineFinish: string; forecastFinish: string;
 }
 export interface Milestone { plan: string; actual: string }
@@ -20,7 +20,7 @@ export interface DprRow {
 export interface Comment { by: string; at: string; text: string }
 export interface ActionItem {
   id: string; projectId: string; title: string; category: string; discipline: string; assignee: string;
-  openDate: string; dueDate: string; status: 'Open' | 'In progress' | 'Closed'; comments: Comment[];
+  openDate: string; dueDate: string; status: 'Open' | 'In progress' | 'Closed'; closedDate: string; comments: Comment[];
 }
 export interface Risk {
   id: string; projectId: string; title: string; category: string; discipline: string; rating: 'High' | 'Medium' | 'Low';

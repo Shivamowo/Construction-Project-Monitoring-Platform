@@ -2,11 +2,22 @@ import type { ActionItem, Delay, DprRow, DrawingRow, DrawingType, PoRow, Project
 
 export const PRIMARY = 'p1';
 
+const P = (id: string, name: string, state: string, lon: number, lat: number, status: Project['status'], phase: Project['phase'], plan: number, actual: number, start: string, exec: string, base: string, fc: string): Project => ({
+  id, name, state, lon, lat, status, phase, planPct: plan, actualPct: actual, start, execStart: exec, baselineFinish: base, forecastFinish: fc,
+});
 export const PROJECTS: Project[] = [
-  { id: 'p1', name: 'Belgaum expansion', state: 'Karnataka', lon: 74.5, lat: 15.85, status: 'Delay', planPct: 27.7, actualPct: 20.9, start: '2024-12-07', execStart: '2025-04-24', baselineFinish: '2026-04-24', forecastFinish: '2026-05-16' },
-  { id: 'p2', name: 'Chittorgarh line 2', state: 'Rajasthan', lon: 74.6, lat: 24.9, status: 'At risk', planPct: 41.0, actualPct: 37.2, start: '2024-06-10', execStart: '2024-11-04', baselineFinish: '2026-12-15', forecastFinish: '2027-01-10' },
-  { id: 'p3', name: 'Ariyalur grinding unit', state: 'Tamil Nadu', lon: 79.1, lat: 11.15, status: 'On track', planPct: 63.0, actualPct: 64.1, start: '2024-02-01', execStart: '2024-07-15', baselineFinish: '2027-02-28', forecastFinish: '2027-02-20' },
-  { id: 'p4', name: 'Sonbhadra waste heat recovery', state: 'Uttar Pradesh', lon: 83.0, lat: 24.2, status: 'Not started', planPct: 0, actualPct: 0, start: '2026-10-15', execStart: '2027-02-01', baselineFinish: '2028-03-31', forecastFinish: '2028-03-31' },
+  P('p1', 'Belgaum expansion', 'Karnataka', 74.5, 15.85, 'Delay', 'Active', 27.7, 20.9, '2024-12-07', '2025-04-24', '2026-04-24', '2026-05-16'),
+  P('p2', 'Chittorgarh line 2', 'Rajasthan', 74.6, 24.9, 'At risk', 'Active', 41.0, 37.2, '2024-06-10', '2024-11-04', '2026-12-15', '2027-01-10'),
+  P('p3', 'Ariyalur grinding unit', 'Tamil Nadu', 79.1, 11.15, 'On track', 'Active', 63.0, 64.1, '2024-02-01', '2024-07-15', '2027-02-28', '2027-02-20'),
+  P('p4', 'Sonbhadra waste heat recovery', 'Uttar Pradesh', 83.0, 24.2, 'On track', 'Planned', 0, 0, '2026-10-15', '2027-02-01', '2028-03-31', '2028-03-31'),
+  P('p5', 'Raipur clinker line', 'Chhattisgarh', 81.6, 21.25, 'At risk', 'Active', 52.0, 47.5, '2024-08-01', '2025-01-20', '2026-11-30', '2026-12-28'),
+  P('p6', 'Kutch bulk terminal', 'Gujarat', 69.8, 23.25, 'On track', 'Active', 71.0, 71.6, '2023-11-15', '2024-05-01', '2026-10-31', '2026-10-25'),
+  P('p7', 'Satna kiln upgrade', 'Madhya Pradesh', 80.8, 24.6, 'On track', 'Active', 35.0, 35.4, '2025-03-01', '2025-08-15', '2027-06-30', '2027-06-30'),
+  P('p8', 'Bilaspur silo complex', 'Himachal Pradesh', 76.8, 31.35, 'At risk', 'Active', 58.0, 52.1, '2024-09-10', '2025-02-01', '2026-12-10', '2027-01-05'),
+  P('p9', 'Cuddapah power block', 'Andhra Pradesh', 78.8, 14.45, 'On track', 'Active', 46.0, 46.8, '2024-10-01', '2025-03-10', '2027-03-31', '2027-03-25'),
+  P('p10', 'Durgapur dispatch yard', 'West Bengal', 87.3, 23.5, 'On track', 'Active', 80.0, 81.2, '2023-08-01', '2024-01-15', '2026-11-15', '2026-11-10'),
+  P('p11', 'Cachar grinding unit', 'Assam', 92.8, 24.8, 'On track', 'Planned', 0, 0, '2026-11-01', '2027-04-01', '2028-06-30', '2028-06-30'),
+  P('p12', 'Nalgonda crusher plant', 'Telangana', 79.3, 17.05, 'On track', 'Planned', 0, 0, '2026-12-01', '2027-05-01', '2028-02-29', '2028-02-29'),
 ];
 
 /** Simplified outline as [lon, lat]. */
@@ -17,14 +28,13 @@ export const INDIA_OUTLINE: [number, number][] = [
   [70, 24.5], [70.5, 26], [71.5, 27.5], [72.5, 29], [74.5, 31], [74, 33], [73.5, 35],
 ];
 
-export const PO_TOTALS = { total: 111, planned: 107, released: 79 };
 export const PO_CATEGORIES = [
-  { name: 'Pre-project', total: 15, planned: 15, released: 15 },
-  { name: 'Civil', total: 6, planned: 6, released: 6 },
-  { name: 'Mechanical', total: 47, planned: 45, released: 15 },
-  { name: 'Electrical', total: 21, planned: 20, released: 14 },
-  { name: 'Instrumentation', total: 21, planned: 20, released: 8 },
-  { name: 'WHRS', total: 1, planned: 1, released: 1 },
+  { name: 'Pre-project', total: 15, planned: 15, released: 15, pastDue: 0 },
+  { name: 'Civil', total: 6, planned: 6, released: 6, pastDue: 0 },
+  { name: 'Mechanical', total: 47, planned: 45, released: 35, pastDue: 11 },
+  { name: 'Electrical', total: 21, planned: 20, released: 14, pastDue: 7 },
+  { name: 'Instrumentation', total: 21, planned: 20, released: 8, pastDue: 12 },
+  { name: 'WHRS', total: 1, planned: 1, released: 1, pastDue: 0 },
 ];
 export const PO_PIPELINE = [
   { name: 'Not yet planned', value: 4 }, { name: 'Engineering inputs', value: 5 }, { name: 'Tender', value: 8 },
@@ -95,87 +105,94 @@ export const VENDORS = [
   { name: 'Anand Rebar (sub-contractor)', share: 0.15, plan: 8400, actual: 4304, manDays: 590 },
 ];
 
-const BUILDINGS = ['Limestone crusher', 'Reject hopper', 'Limestone stacker and reclaimer', 'Coal reclaimer upgradation', 'Additive stacker and reclaimer', 'Box feeder', 'RM hopper', 'Raw mill building', 'Raw mill ducting complex', 'Raw mill baghouse', 'Blending silo', 'Pre-heater building', 'KP1 TAD', 'KP2 TAD', 'KP3 TAD', 'Coal mill hopper', 'Coal mill recirculation building'];
-const SCOPES = [4400, 200, 4500, 200, 3000, 990, 1200, 5500, 0, 3420, 3750, 13000, 1350, 1150, 1000, 250, 650];
-const FACT = [1.0, 0.7, 0.95, 0.6, 1.1, 0.85, 0.4, 1.0, 0.75, 0.9];
-const NOTES = ['Shuttering material short', 'Rain stopped pour', 'Batching plant breakdown', 'Rebar delivery late', 'Labour shortfall'];
-function dprRow(i: number, disc: string, building: string, vendor: string, unit: string, scope: number): DprRow {
-  const f = FACT[i % FACT.length];
-  const ftmPlan = Math.round(scope * 0.06), ftdPlan = Math.round(ftmPlan / 26), ftdAct = Math.round(ftdPlan * f), ftmAct = Math.round(ftmPlan * f);
-  return {
-    id: `dpr-${disc[0]}${i}`, projectId: 'p1', discipline: disc, building, vendor, unit, scope, cumPlan: Math.round(scope * 0.43), cumAch: Math.round(scope * 0.25 * f),
-    ftmPlan, ftmAct, ftdPlan, ftdAct, weekly: Math.round(ftmAct / 4.3), remarks: ftdAct < ftdPlan ? NOTES[i % NOTES.length] : '',
-  };
-}
-export const DPR: DprRow[] = [
-  ...BUILDINGS.map((b, i) => dprRow(i, 'Civil', b, i < 9 ? 'Vardhan Civil Works' : 'Kaveri Infra', 'm³', SCOPES[i])),
-  ...[['Pre-heater building', 6200], ['Raw mill building', 3100], ['Blending silo', 2400], ['Coal mill hopper', 900]].map(([b, s], i) => dprRow(i + 3, 'Structural', b as string, 'Metalcraft Fabrication', 'MT', s as number)),
-];
-
-const A = (n: number, title: string, category: string, discipline: string, assignee: string, openDate: string, dueDate: string, status: ActionItem['status'] = 'Open'): ActionItem => ({
-  id: `A-${100 + n}`, projectId: 'p1', title, category, discipline, assignee, openDate, dueDate, status, comments: [],
+const dpr = (id: string, disc: string, building: string, vendor: string, unit: string, v: number[], reason = ''): DprRow => ({
+  id, projectId: 'p1', discipline: disc, building, vendor, unit,
+  scope: v[0], cumPlan: v[1], cumAch: v[2], ftmPlan: v[3], ftmAct: v[4], ftdPlan: v[5], ftdAct: v[6], weekly: Math.round(v[4] / 4.3), remarks: reason,
 });
-const AN = ['Anita Rao', 'Vikram Shetty', 'Meera Nair', 'Rohit Kulkarni', 'Sanjay Patil', 'Deepa Menon'];
-export const ACTIONS: ActionItem[] = [
-  A(1, 'Negotiate batching plant rate with contractor', 'Construction', 'Civil', AN[0], '2026-07-06', '2026-08-10'),
-  A(2, 'Start excavation for coal mill', 'Construction', 'Civil', AN[1], '2026-07-14', '2026-08-30', 'In progress'),
-  A(3, 'Get manpower increase confirmed by contractor', 'Construction', 'Civil', AN[2], '2026-07-20', '2026-09-05'),
-  A(4, 'Arrange portable water supply for workers', 'Site facilities', 'General', AN[3], '2026-08-03', '2026-09-12', 'In progress'),
-  A(5, 'Release TMT second lot PO', 'Procurement', 'Civil', AN[4], '2026-08-10', '2026-10-05'),
-  A(6, 'Freeze GA for raw mill baghouse', 'Design', 'Mechanical', AN[5], '2026-08-12', '2026-09-20'),
-  A(7, 'Issue fabrication drawings for pre-heater structure', 'Design', 'Structural', AN[0], '2026-08-18', '2026-10-10'),
-  A(8, 'Confirm tower crane erection slot', 'Construction', 'Structural', AN[1], '2026-08-24', '2026-10-01'),
-  A(9, 'Approve weigh bridge vendor drawings', 'Procurement', 'Mechanical', AN[2], '2026-08-28', '2026-10-08'),
-  A(10, 'Close transformer technical queries', 'Procurement', 'Electrical', AN[3], '2026-09-01', '2026-10-12', 'In progress'),
-  A(11, 'Submit TPI scope for approval', 'Commercial', 'General', AN[4], '2026-09-04', '2026-10-15'),
-  A(12, 'Resolve rebar yard layout clash', 'Construction', 'Civil', AN[5], '2026-09-08', '2026-10-06'),
-  A(13, 'Update coal mill hopper baseline schedule', 'Planning', 'General', AN[0], '2026-09-14', '2026-10-20'),
-  A(14, 'Share cable tray routing for raw mill', 'Design', 'Electrical', AN[1], '2026-09-18', '2026-10-25'),
-  A(15, 'Confirm instrumentation panel room size', 'Design', 'Instrumentation', AN[2], '2026-09-22', '2026-10-28'),
-  A(16, 'Arrange night lighting for pre-heater pour', 'Construction', 'Civil', AN[3], '2026-09-25', '2026-10-05'),
-  A(17, 'Clear contractor invoices for July', 'Commercial', 'General', AN[4], '2026-09-27', '2026-10-30'),
-  A(18, 'Mobilise second batching plant', 'Construction', 'Civil', AN[5], '2026-06-15', '2026-07-30', 'Closed'),
-  A(19, 'Finalise labour camp layout', 'Site facilities', 'General', AN[0], '2026-06-20', '2026-07-25', 'Closed'),
-  { ...A(20, 'Confirm kiln shell delivery window', 'Procurement', 'Mechanical', AN[1], '2026-09-10', '2026-10-15'), id: 'A-201', projectId: 'p2' },
-  { ...A(21, 'Approve revised cooler foundation drawing', 'Design', 'Civil', AN[2], '2026-09-16', '2026-10-20'), id: 'A-202', projectId: 'p2' },
-  { ...A(22, 'Close mill motor commissioning punch list', 'Construction', 'Electrical', AN[3], '2026-09-05', '2026-10-10'), id: 'A-301', projectId: 'p3' },
-  { ...A(23, 'Confirm site access permit renewal', 'Commercial', 'General', AN[4], '2026-09-20', '2026-10-18'), id: 'A-302', projectId: 'p3' },
-  { ...A(24, 'Submit environmental clearance update', 'Commercial', 'General', AN[5], '2026-09-12', '2026-10-30'), id: 'A-401', projectId: 'p4' },
+// [scope, cumPlan, cumAch, ftmPlan, ftmAct, ftdPlan, ftdAct]
+export const DPR: DprRow[] = [
+  dpr('dpr-1', 'Civil', 'Limestone crusher', 'Vardhan Civil Works', 'm³', [4400, 2900, 2100, 1800, 1500, 70, 62], 'Mobilization'),
+  dpr('dpr-2', 'Civil', 'Raw mill building', 'Vardhan Civil Works', 'm³', [5500, 3600, 2700, 2300, 2000, 90, 80], 'Awaiting front'),
+  dpr('dpr-3', 'Civil', 'Blending silo', 'Vardhan Civil Works', 'm³', [3420, 2200, 1500, 1300, 1300, 50, 50]),
+  dpr('dpr-4', 'Civil', 'Coal mill hopper', 'Kaveri Infra', 'm³', [3750, 2450, 1900, 1500, 1250, 60, 52], 'Access constraint'),
+  dpr('dpr-5', 'Civil', 'Pre-heater building', 'Kaveri Infra', 'm³', [13000, 8400, 6100, 4900, 3900, 190, 160], 'Mobilization'),
+  dpr('dpr-6', 'Civil', 'KP1 TAD', 'Kaveri Infra', 'm³', [1350, 870, 640, 500, 500, 20, 20]),
+  dpr('dpr-7', 'Civil', 'Reject hopper', 'Kaveri Infra', 'm³', [1150, 750, 560, 500, 350, 20, 14], 'Awaiting front'),
+  dpr('dpr-8', 'Civil', 'Cooler, ESP and chimney', 'Vardhan Civil Works', 'm³', [4200, 2700, 1800, 1600, 1400, 60, 50], 'Access constraint'),
+  dpr('dpr-9', 'Structural', 'Pre-heater structure', 'Metalcraft Fabrication', 'MT', [2950, 1900, 1100, 1000, 1000, 40, 40]),
+  dpr('dpr-10', 'Structural', 'Raw mill structure', 'Metalcraft Fabrication', 'MT', [1400, 754, 542, 500, 480, 20, 20], 'Mobilization'),
 ];
 
-const R = (n: number, title: string, category: string, discipline: string, rating: Risk['rating'], status: Risk['status'], owner: string, mitigation: string, link: string, openDate: string): Risk => ({
-  id: `R-${10 + n}`, projectId: 'p1', title, category, discipline, rating, status, owner, mitigation, link, openDate,
+const daysAgo = (n: number) => { const d = new Date(Date.UTC(2026, 8, 30) - n * 86400000); return d.toISOString().slice(0, 10); };
+const ROLES = ['Project team', 'Civil team', 'Site team', 'Commercial', 'Client representative', 'Contractor representative'];
+type AT = [string, string, string, string, number, ActionItem['status']];
+const OPEN: AT[] = [
+  ['Negotiate batching plant rate with contractor', 'Construction', 'Civil', ROLES[1], 86, 'Open'],
+  ['Start excavation for coal mill', 'Construction', 'Civil', ROLES[2], 78, 'In progress'],
+  ['Get manpower increase confirmed by contractor', 'Construction', 'Civil', ROLES[5], 72, 'Open'],
+  ['Arrange portable water supply for workers', 'Construction', 'General', ROLES[2], 58, 'In progress'],
+  ['Release TMT second lot PO', 'Procurement', 'Civil', ROLES[3], 51, 'Open'],
+  ['Freeze GA for raw mill baghouse', 'Engineering', 'Mechanical', ROLES[0], 49, 'Open'],
+  ['Issue fabrication drawings for pre-heater structure', 'Engineering', 'Structural', ROLES[0], 43, 'Open'],
+  ['Confirm tower crane erection slot', 'Procurement', 'Structural', ROLES[3], 40, 'In progress'],
+  ['Approve weigh bridge vendor drawings', 'Engineering', 'Mechanical', ROLES[4], 38, 'Open'],
+  ['Close transformer technical queries', 'Procurement', 'Electrical', ROLES[0], 37, 'In progress'],
+  ['Submit TPI scope for approval', 'Procurement', 'General', ROLES[3], 35, 'Open'],
+  ['Resolve rebar yard layout clash', 'Construction', 'Civil', ROLES[1], 33, 'Open'],
+  ['Update coal mill hopper baseline schedule', 'Engineering', 'General', ROLES[0], 32, 'Open'],
+  ['Share cable tray routing for raw mill', 'Engineering', 'Electrical', ROLES[0], 31, 'Open'],
+  ['Confirm instrumentation panel room size', 'Engineering', 'Instrumentation', ROLES[4], 12, 'Open'],
+  ['Arrange night lighting for pre-heater pour', 'Construction', 'Civil', ROLES[2], 8, 'Open'],
+  ['Clear contractor invoices for July', 'Procurement', 'General', ROLES[3], 3, 'Open'],
+];
+const CLOSED: [string, string, string, string, number, number][] = [
+  ['Mobilise second batching plant', 'Construction', 'Civil', ROLES[1], 70, 25],
+  ['Finalise labour camp layout', 'Construction', 'General', ROLES[2], 64, 21],
+  ['Approve kiln foundation drawing', 'Engineering', 'Civil', ROLES[4], 60, 18],
+  ['Place order for cable trays', 'Procurement', 'Electrical', ROLES[3], 55, 14],
+  ['Issue GA for cement silo', 'Engineering', 'General', ROLES[0], 50, 10],
+  ['Certify July concrete bills', 'Procurement', 'Civil', ROLES[3], 46, 6],
+  ['Close crane foundation punch list', 'Construction', 'Structural', ROLES[1], 42, 2],
+];
+export const ACTIONS: ActionItem[] = [
+  ...OPEN.map((a, i): ActionItem => ({ id: `A-${101 + i}`, projectId: 'p1', title: a[0], category: a[1], discipline: a[2], assignee: a[3], openDate: daysAgo(a[4]), dueDate: daysAgo(a[4] - 30), status: a[5], closedDate: '', comments: [] })),
+  ...CLOSED.map((a, i): ActionItem => ({ id: `A-${118 + i}`, projectId: 'p1', title: a[0], category: a[1], discipline: a[2], assignee: a[3], openDate: daysAgo(a[4]), dueDate: daysAgo(a[4] - 30), status: 'Closed', closedDate: daysAgo(a[5]), comments: [] })),
+];
+
+const R = (n: number, title: string, category: string, discipline: string, rating: Risk['rating'], status: Risk['status'], owner: string, mitigation: string, link: string, age: number): Risk => ({
+  id: `R-${10 + n}`, projectId: 'p1', title, category, discipline, rating, status, owner, mitigation, link, openDate: daysAgo(age),
 });
 export const RISKS: Risk[] = [
-  R(1, 'Batching plant capacity below peak pour demand', 'Construction', 'Civil', 'High', 'Open', AN[0], 'Mobilise second plant and agree night pour schedule.', 'Action A-101', '2026-07-08'),
-  R(2, 'Coal mill excavation slips past monsoon', 'Construction', 'Civil', 'High', 'Mitigating', AN[1], 'Add dewatering pumps and second excavation crew.', 'Delay D-02', '2026-07-16'),
-  R(3, 'Contractor manpower stays below plan', 'Construction', 'Civil', 'High', 'Open', AN[2], 'Weekly manpower review with contractor heads.', 'Action A-103', '2026-07-22'),
-  R(4, 'Water supply gap affects labour welfare', 'Construction', 'General', 'Medium', 'Mitigating', AN[3], 'Install tanker point and portable storage.', 'Action A-104', '2026-08-05'),
-  R(5, 'Rebar yard congestion slows fabrication feed', 'Construction', 'Civil', 'Medium', 'Open', AN[5], 'Re-plan yard zones and stage deliveries.', 'Action A-112', '2026-09-08'),
-  R(6, 'Crane availability delays steel erection', 'Construction', 'Structural', 'Medium', 'Open', AN[1], 'Lock crane slot and line up a standby crane.', 'Action A-108', '2026-08-26'),
-  R(7, 'Night pours limited by site lighting', 'Construction', 'Civil', 'Low', 'Open', AN[3], 'Add mast lighting at pour locations.', 'Action A-116', '2026-09-25'),
-  R(8, 'TMT lot release slips beyond need date', 'Procurement', 'Civil', 'High', 'Open', AN[4], 'Escalate PO approval and split the lot.', 'Action A-105', '2026-08-11'),
-  R(9, 'Transformer lead time exceeds erection window', 'Procurement', 'Electrical', 'High', 'Open', AN[3], 'Confirm slot with vendor and expedite testing.', 'Delay D-06', '2026-09-02'),
-  R(10, 'Client sign-off on GA drawings pending', 'Design', 'General', 'Medium', 'Closed', AN[5], 'Sign-off received on 12 August.', 'Action A-106', '2026-06-25'),
-  { ...R(11, 'Kiln shell fabrication yard capacity', 'Procurement', 'Mechanical', 'Medium', 'Open', AN[2], 'Audit vendor yard and add a second shift.', '', '2026-09-11'), id: 'R-201', projectId: 'p2' },
-  { ...R(12, 'Commissioning team availability', 'Construction', 'Electrical', 'Low', 'Open', AN[4], 'Book commissioning engineers early.', '', '2026-09-09'), id: 'R-301', projectId: 'p3' },
-  { ...R(13, 'Land handover for the boiler area', 'Construction', 'Civil', 'Medium', 'Open', AN[0], 'Agree handover date with the state authority.', '', '2026-09-15'), id: 'R-401', projectId: 'p4' },
+  R(1, 'Batching plant capacity below peak pour demand', 'Construction', 'Civil', 'High', 'Open', ROLES[1], 'Mobilise second plant and agree night pour schedule.', 'Action A-101', 84),
+  R(2, 'Coal mill excavation slips past monsoon', 'Construction', 'Civil', 'High', 'Mitigating', ROLES[2], 'Add dewatering pumps and second excavation crew.', 'Delay D-02', 76),
+  R(3, 'TMT lot release slips beyond need date', 'Procurement', 'Civil', 'High', 'Open', ROLES[3], 'Escalate PO approval and split the lot.', 'Action A-105', 50),
+  R(4, 'Transformer lead time exceeds erection window', 'Procurement', 'Electrical', 'High', 'Open', ROLES[3], 'Confirm slot with vendor and expedite testing.', 'Delay D-06', 28),
+  R(5, 'Contractor invoices disputed on escalation clause', 'Commercial', 'General', 'High', 'Open', ROLES[3], 'Hold a joint reconciliation meeting this month.', 'Action A-117', 20),
+  R(6, 'Contractor manpower stays below plan', 'Construction', 'Civil', 'Medium', 'Open', ROLES[5], 'Weekly manpower review with contractor heads.', 'Action A-103', 70),
+  R(7, 'Rebar yard congestion slows fabrication feed', 'Construction', 'Civil', 'Medium', 'Open', ROLES[1], 'Re-plan yard zones and stage deliveries.', 'Action A-112', 33),
+  R(8, 'Change orders pending client approval', 'Commercial', 'General', 'Medium', 'Mitigating', ROLES[4], 'Table change orders at the next steering meeting.', '', 45),
+  R(9, 'Crane availability delays steel erection', 'Construction', 'Structural', 'Medium', 'Open', ROLES[2], 'Lock crane slot and line up a standby crane.', 'Action A-108', 40),
+  R(10, 'Client sign-off on GA drawings pending', 'Commercial', 'General', 'Medium', 'Closed', ROLES[0], 'Sign-off received on 12 September.', 'Action A-106', 90),
 ];
 
-const D = (n: number, description: string, person: string, org: string, openDate: string, closeDate: string, daysLost: number, linked: string, discipline: string): Delay => ({
-  id: `D-0${n}`, projectId: 'p1', description, person, org, openDate, closeDate, status: closeDate ? 'Closed' : 'Open', daysLost, linked, discipline,
+// ages 200, 160, 140, 100, 68, 40 days: average of open delays is 118 days
+const D = (n: number, description: string, person: string, org: string, age: number, closeAge: number | null, daysLost: number, linked: string, discipline: string): Delay => ({
+  id: `D-0${n}`, projectId: 'p1', description, person, org, openDate: daysAgo(age), closeDate: closeAge === null ? '' : daysAgo(closeAge), status: closeAge === null ? 'Open' : 'Closed', daysLost, linked, discipline,
 });
 export const DELAYS: Delay[] = [
-  D(1, 'Batching plant output below committed rate', AN[0], 'Vardhan Civil Works', '2026-07-06', '', 9, 'Building: Pre-heater building', 'Civil'),
-  D(2, 'Coal mill excavation started late', AN[1], 'Kaveri Infra', '2026-07-14', '', 14, 'Building: Coal mill hopper', 'Civil'),
-  D(3, 'Contractor manpower below plan', AN[2], 'Vardhan Civil Works', '2026-07-20', '', 11, 'Building: Raw mill building', 'Civil'),
-  D(4, 'Water supply interrupted at labour camp', AN[3], 'Site services', '2026-08-03', '2026-08-19', 3, 'Building: Limestone crusher', 'General'),
-  D(5, 'TMT first lot delivered late', AN[4], 'Steel supplier', '2026-07-01', '2026-07-18', 5, 'PO: TMT first lot', 'Civil'),
-  D(6, 'Transformer PO release pending approval', AN[3], 'Owner procurement', '2026-09-02', '', 8, 'PO: Transformer', 'Electrical'),
-  D(7, 'Raw mill baghouse GA not frozen', AN[5], 'Design consultant', '2026-08-12', '', 6, 'Drawing: Raw mill baghouse', 'Mechanical'),
-  D(8, 'Tower crane arrival delayed', AN[1], 'Crane vendor', '2026-08-24', '', 7, 'PO: Tower crane', 'Structural'),
-  D(9, 'Rain stopped concrete pours for two days', AN[0], 'Kaveri Infra', '2026-08-28', '2026-08-31', 2, 'Building: Cement silo', 'Civil'),
-  { ...D(10, 'Kiln shell drawing revision', AN[2], 'Design consultant', '2026-09-16', '', 4, 'Drawing: Kiln shell', 'Mechanical'), id: 'D-201', projectId: 'p2' },
-  { ...D(11, 'Cable tray supplier slippage', AN[4], 'Electrical vendor', '2026-09-05', '', 3, 'PO: Cable trays', 'Electrical'), id: 'D-301', projectId: 'p3' },
-  { ...D(12, 'Statutory clearance pending', AN[5], 'State authority', '2026-09-12', '', 10, 'Site: Boiler area', 'Civil'), id: 'D-401', projectId: 'p4' },
+  D(1, 'Land handover for coal mill area pending', ROLES[4], 'Owner site office', 200, null, 22, 'Building: Coal mill hopper', 'Civil'),
+  D(2, 'Statutory clearance for crusher pending', ROLES[4], 'State authority', 160, null, 15, 'Building: Limestone crusher', 'Civil'),
+  D(3, 'Client drawing approvals slower than plan', ROLES[4], 'Client design cell', 140, null, 12, 'Drawing: Raw mill baghouse', 'Mechanical'),
+  D(4, 'Batching plant output below committed rate', ROLES[5], 'Vardhan Civil Works', 100, null, 9, 'Building: Pre-heater building', 'Civil'),
+  D(5, 'Contractor manpower below plan', ROLES[5], 'Kaveri Infra', 68, null, 11, 'Building: Raw mill building', 'Civil'),
+  D(6, 'Transformer PO release pending approval', ROLES[5], 'Transformer vendor', 40, null, 8, 'PO: Transformer', 'Electrical'),
+  D(7, 'Water supply interrupted at labour camp', ROLES[2], 'Site services', 90, 70, 3, 'Building: Limestone crusher', 'General'),
+  D(8, 'TMT first lot delivered late', ROLES[3], 'Steel supplier', 75, 55, 5, 'PO: TMT first lot', 'Civil'),
+  D(9, 'Rain stopped concrete pours for two days', ROLES[1], 'Kaveri Infra', 45, 42, 2, 'Building: Cement silo', 'Civil'),
 ];
+
+/** Seven-point trends used by KPI sparklines. */
+export const TRENDS: Record<string, number[]> = {
+  actions: [12, 14, 15, 16, 18, 17, 17], risks: [6, 7, 8, 8, 9, 9, 9], delays: [4, 4, 5, 5, 6, 6, 6], ageing: [96, 101, 106, 110, 113, 116, 118],
+  planned: [20, 22, 24, 25, 26, 26, 27], achieved: [12, 13, 14, 16, 17, 18, 19], onTrack: [7, 7, 8, 8, 8, 8, 8],
+};

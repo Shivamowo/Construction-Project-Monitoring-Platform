@@ -1,13 +1,16 @@
 'use client';
 import Link from 'next/link';
-import { DRAWING_TYPES, PO_TOTALS } from '@/data/seed';
 import { useScoped } from '@/lib/store';
-import { daysRemaining, drawingPct, fmtDate, fmtNum, poReleasedPct, varianceDays } from '@/lib/metrics';
+import { daysRemaining, drawingPct, poReleasedPct, varianceDays } from '@/lib/metrics';
+import { dateLong as fmtDate, num as fmtNum } from '@/lib/format';
 import { SCurve } from '@/components/SCurve';
 import { BigStat, DarkPanel, EmptyState, StripeBar, Tile, toneFor } from '@/components/ui';
 
 export default function Scorecard() {
-  const { active, hasDetail, actions, risks } = useScoped();
+  const { active, hasDetail, actions, risks, procurement, drawings } = useScoped();
+  const DRAWING_TYPES = drawings.types;
+  const PO_TOTALS = { total: procurement.categories.reduce((a, c) => a + c.total, 0), released: procurement.categories.reduce((a, c) => a + c.released, 0) };
+  const critical = procurement.rows.filter((r) => r.critical && !r.po.actual).length;
   const v = varianceDays(active.baselineFinish, active.forecastFinish);
   const rem = daysRemaining(active.forecastFinish);
   const openActions = actions.filter((a) => a.status !== 'Closed').length;
@@ -35,14 +38,21 @@ export default function Scorecard() {
           <div className="mt-4"><StripeBar label="Drawings received" value={dRec} color="yellow" /></div>
         </Tile>
         <Tile>
-          <BigStat label="Open actions" value={openActions} href="/actions?state=Active" />
+          <BigStat label="Open actions" value={openActions} href="/actions?status=Not%20closed" />
           <div className="mt-4"><StripeBar label="Open actions share of all actions" value={actions.length ? (openActions / actions.length) * 100 : 0} color="ink" /></div>
         </Tile>
         <Tile>
-          <BigStat label="High risks" value={high} href="/risks?state=Active&rating=High" tone={high ? 'bad' : undefined} />
+          <BigStat label="High risks" value={high} href="/risks?status=Not%20closed&rating=High" tone={high ? 'bad' : undefined} />
           <div className="mt-4"><StripeBar label="High risks share of open risks" value={risks.filter((r) => r.status !== 'Closed').length ? (high / risks.filter((r) => r.status !== 'Closed').length) * 100 : 0} color="bad" /></div>
         </Tile>
       </div>
+      <Tile surface title="Priority signals">
+        <div className="flex flex-wrap gap-2">
+          <Link href="/risks?status=Not%20closed&rating=High" className="chip chip-bad">{high} high risks</Link>
+          <Link href="/actions?status=Not%20closed" className="chip chip-warn">{openActions} open actions</Link>
+          <Link href="/procurement?critical=1" className="chip chip-bad">{critical} critical POs</Link>
+        </div>
+      </Tile>
       <DarkPanel>
         <h2 className="mb-2 text-lg font-medium">S-curve: plan and actual progress</h2>
         {hasDetail ? <SCurve /> : detail}

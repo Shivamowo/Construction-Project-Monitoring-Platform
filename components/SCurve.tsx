@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { Area, Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { SCURVE } from '@/data/seed';
 import { monthInRange, toGranularity } from '@/lib/metrics';
 import { useStore } from '@/lib/store';
 import { ChartLegend } from './ChartLegend';
@@ -11,13 +10,13 @@ const DRAW_MS = 900;
 const YEL = '#FFE600';
 
 export function SCurve() {
-  const { filters } = useStore();
+  const { filters, schedule } = useStore();
   const reduced = useReducedMotion();
   const [drawn, setDrawn] = useState(false);
   useEffect(() => { const t = setTimeout(() => setDrawn(true), DRAW_MS + 300); return () => clearTimeout(t); }, []);
 
   const { rows, reportLabel, cumPlanAt, cumActual } = useMemo(() => {
-    const base = SCURVE.filter((r) => monthInRange(r.ym, filters.range));
+    const base = schedule.filter((r) => monthInRange(r.ym, filters.range));
     const all = toGranularity(base, filters.gran, ['plan', 'actual']);
     let cp = 0, ca = 0, last = '';
     const rows = all.map((r) => {
@@ -29,7 +28,7 @@ export function SCurve() {
     });
     const at = [...rows].reverse().find((r) => r.cumActual !== null);
     return { rows, reportLabel: last, cumPlanAt: at?.cumPlan ?? 0, cumActual: at?.cumActual ?? 0 };
-  }, [filters.range, filters.gran]);
+  }, [filters.range, filters.gran, schedule]);
 
   const anim = { isAnimationActive: !reduced && !drawn, animationDuration: DRAW_MS, animationEasing: 'ease-out' as const };
   const tick = { fill: '#C9CDD8', fontSize: 12 };

@@ -1,84 +1,112 @@
 'use client';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useScoped } from '@/lib/store';
-import { fmtNum } from '@/lib/metrics';
-import { Button, Drawer, EmptyState, Field, FilterBar, PillSelect, StripeBar, inputCls, toneFor } from '@/components/ui';
+import { shortfall, sum } from '@/lib/metrics';
+import { num, pct } from '@/lib/format';
+import { REPORT_DATE } from '@/lib/brand';
+import { Button, Drawer, EmptyState, Field, FilterCluster, HeaderFilters, KpiCard, StatusChip, StripeBar, inputCls, toneFor, useUrlParams } from '@/components/ui';
+import { DISCIPLINES } from '@/lib/store';
 import type { DprRow } from '@/lib/types';
 
 const TITLE: Record<string, string> = { Civil: 'Civil (concrete, m³)', Structural: 'Structural (fabrication, MT)' };
+const REASONS = ['Mobilization', 'Access constraint', 'Awaiting front'];
 
 function Entry({ r, onDone }: { r: DprRow; onDone: () => void }) {
   const { updateRow, toast } = useScoped();
   const [ftd, setFtd] = useState(String(r.ftdAct));
-  const [remarks, setRemarks] = useState(r.remarks);
+  const [reason, setReason] = useState(r.remarks);
   const [err, setErr] = useState('');
-  const below = ftd.trim() !== '' && Number(ftd) < r.ftdPlan;
+  const n = Number(ftd);
+  const newFtm = r.ftmAct + (Number.isNaN(n) ? 0 : n - r.ftdAct);
+  const behind = shortfall(r.ftmPlan, newFtm);
   const save = () => {
-    const n = Number(ftd);
     const fail = (m: string) => { setErr(m); toast(m, 'error'); };
     if (ftd.trim() === '' || Number.isNaN(n) || n < 0) return fail('Enter today’s actual as a number of 0 or more.');
-    if (n < r.ftdPlan && !remarks.trim()) return fail(`Add a remark: today’s actual is below the plan of ${fmtNum(r.ftdPlan)}.`);
-    const delta = n - r.ftdAct;
-    updateRow('dpr', r.id, { ftdAct: n, cumAch: r.cumAch + delta, ftmAct: r.ftmAct + delta, weekly: r.weekly + delta, remarks: remarks.trim() });
+    if (behind > 0 && !reason) return fail(`Choose a reason: this activity is ${num(behind)} behind plan for the month.`);
+    updateRow('dpr', r.id, { ftdAct: n, cumAch: r.cumAch + (n - r.ftdAct), ftmAct: newFtm, weekly: r.weekly + (n - r.ftdAct), remarks: behind > 0 ? reason : '' });
     toast('Progress logged');
     onDone();
   };
   return (
     <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); save(); }}>
-      <div className="rounded-xl bg-tile p-4 text-sm">
-        <p className="font-medium">{r.building}</p><p className="text-sub">{r.vendor}</p>
-        <dl className="mt-3 grid grid-cols-3 gap-2">
-          {[['Scope', r.scope], ['Cum plan', r.cumPlan], ['Cum achieved', r.cumAch], ['FTM plan', r.ftmPlan], ['FTM actual', r.ftmAct], ['Weekly', r.weekly]].map(([k, v]) => <div key={k as string}><dt className="text-xs text-sub">{k}</dt><dd className="text-lg">{fmtNum(v as number)}</dd></div>)}
+      <div className="tile text-sm">
+        <p className="m-0 font-medium">{r.building}</p><p className="m-0 label">{r.vendor}</p>
+        <dl className="m-0 mt-3 grid grid-cols-3 gap-2">
+          {[['Scope', r.scope], ['Cum plan', r.cumPlan], ['Cum actual', r.cumAch], ['Plan FTM', r.ftmPlan], ['Actual FTM', r.ftmAct], ['Weekly', r.weekly]].map(([k, v]) => <div key={k as string}><dt className="text-xs label">{k}</dt><dd className="m-0 text-lg">{num(v as number)}</dd></div>)}
         </dl>
       </div>
-      <Field label={`Today’s actual (plan ${fmtNum(r.ftdPlan)} ${r.unit})`}><input type="number" min={0} inputMode="numeric" value={ftd} onChange={(e) => { setFtd(e.target.value); setErr(''); }} className={inputCls} /></Field>
-      <Field label={below ? 'Remarks (required)' : 'Remarks'}><input value={remarks} onChange={(e) => { setRemarks(e.target.value); setErr(''); }} className={`${inputCls} ${below ? 'border-bad' : ''}`} /></Field>
-      {err && <p role="alert" className="text-sm text-bad">{err}</p>}
+      <Field label={`Today’s actual (plan ${num(r.ftdPlan)} ${r.unit})`}><input type="number" min={0} inputMode="numeric" value={ftd} onChange={(e) => { setFtd(e.target.value); setErr(''); }} className={inputCls} /></Field>
+      <Field label={behind > 0 ? `Reason (required, ${num(behind)} behind)` : 'Reason'}>
+        <select value={reason} onChange={(e) => { setReason(e.target.value); setErr(''); }} className={inputCls} style={behind > 0 && !reason ? { borderColor: 'var(--red)' } : undefined}>
+          <option value="">{behind > 0 ? 'Choose a reason' : 'No reason needed'}</option>{REASONS.map((x) => <option key={x}>{x}</option>)}
+        </select>
+      </Field>
+      {err && <p role="alert" className="m-0 text-sm" style={{ color: 'var(--red)' }}>{err}</p>}
       <Button variant="primary" type="submit">Log progress</Button>
     </form>
   );
 }
 
 export default function Dpr() {
-  const { dpr, hasDetail, active, cmd } = useScoped();
-  const [q, setQ] = useState('');
-  const [vendor, setVendor] = useState('');
+  const { dpr, hasDetail, active, cmd, filters, setFilters, trends } = useScoped();
+  const url = useUrlParams({ date: REPORT_DATE, vendor: '' });
   const [openId, setOpenId] = useState<string | null>(null);
   const cmd0 = useRef(cmd);
-  const rows = dpr.filter((r) => (!vendor || r.vendor === vendor) && (!q || `${r.building} ${r.vendor}`.toLowerCase().includes(q.toLowerCase())));
-  useEffect(() => { if (cmd !== cmd0.current) { cmd0.current = cmd; if (rows[0]) setOpenId(rows[0].id); } }, [cmd, rows]);
+  const rows = dpr.filter((r) => !url.values.vendor || r.vendor === url.values.vendor);
+  const dateOk = url.values.date === REPORT_DATE;
+  const shown = dateOk ? rows : [];
+  useEffect(() => { if (cmd !== cmd0.current) { cmd0.current = cmd; if (shown[0]) setOpenId(shown[0].id); } }, [cmd, shown]);
   const cur = dpr.find((r) => r.id === openId);
-  const groups = [...new Set(rows.map((r) => r.discipline))];
+  const groups = [...new Set(shown.map((r) => r.discipline))];
+  const scope = sum(shown.map((r) => r.scope)), plan = sum(shown.map((r) => r.cumPlan)), ach = sum(shown.map((r) => r.cumAch)), tp = sum(shown.map((r) => r.ftdPlan)), ta = sum(shown.map((r) => r.ftdAct));
+  const vendors = [...new Set(dpr.map((r) => r.vendor))];
+
   const bar = (r: DprRow) => (
     <div className="flex min-w-[140px] items-center gap-3">
       <StripeBar label={`${r.building} achieved`} value={r.scope ? (r.cumAch / r.scope) * 100 : 0} plan={r.scope ? (r.cumPlan / r.scope) * 100 : undefined} color={toneFor(r.cumAch, r.cumPlan)} />
       <span className="w-10 text-right text-xs">{r.scope ? Math.round((r.cumAch / r.scope) * 100) : 0}%</span>
     </div>
   );
+  const behind = (r: DprRow) => {
+    const n = shortfall(r.ftmPlan, r.ftmAct);
+    return n > 0 ? <span className="flex flex-col items-start gap-1"><StatusChip tone="warn">{num(n)} behind</StatusChip><span className="text-xs label">{r.remarks || 'Reason needed'}</span></span> : <StatusChip tone="good">On plan</StatusChip>;
+  };
 
-  if (!hasDetail) return <EmptyState title={`No daily progress is loaded for ${active.name}. Select Belgaum expansion to enter progress.`} />;
   return (
-    <div className="flex flex-col gap-4">
-      <FilterBar active={(vendor ? 1 : 0) + (q ? 1 : 0)} search={{ value: q, onChange: setQ, placeholder: 'Search buildings' }}>
-        <PillSelect label="Vendor" value={vendor} onChange={setVendor} options={[{ v: '', l: 'Vendor: all' }, ...[...new Set(dpr.map((r) => r.vendor))].map((v) => ({ v, l: v }))]} />
-      </FilterBar>
-      {!rows.length ? <EmptyState title="No rows match. Clear the filters or set the discipline to All disciplines." action={{ label: 'Clear filters', onClick: () => { setQ(''); setVendor(''); } }} /> : (
+    <>
+      <HeaderFilters>
+        <FilterCluster onClear={() => { url.clear(); setFilters({ discipline: 'All' }); }} filters={[
+          { key: 'date', label: 'Date', type: 'date', value: url.values.date, def: REPORT_DATE, onChange: (v) => url.set('date', v) },
+          { key: 'discipline', label: 'Discipline', value: filters.discipline, def: 'All', onChange: (v) => setFilters({ discipline: v }), options: DISCIPLINES.filter((d) => d === 'All' || d === 'Civil' || d === 'Structural').map((d) => ({ v: d, l: d === 'All' ? 'All' : d })) },
+          { key: 'vendor', label: 'Vendor', value: url.values.vendor, def: '', onChange: (v) => url.set('vendor', v), options: [{ v: '', l: 'All' }, ...vendors.map((v) => ({ v, l: v }))] },
+        ]} />
+      </HeaderFilters>
+      <div className="kpi-grid c5">
+        <KpiCard label="Scope qty" value={num(scope)} rail="neutral" context={`${shown.length} activities`} />
+        <KpiCard label="Plan till date" value={num(plan)} rail="neutral" spark={trends.planned} context={`${scope ? Math.round((plan / scope) * 100) : 0}% of scope`} />
+        <KpiCard label="Achieved" value={num(ach)} rail={ach >= plan ? 'good' : 'caution'} spark={trends.achieved} context={`${scope ? Math.round((ach / scope) * 100) : 0}% of scope`} />
+        <KpiCard label="Today plan" value={num(tp)} rail="neutral" context="Planned quantity for today" />
+        <KpiCard label="Today actual" value={num(ta)} rail={ta >= tp ? 'good' : 'caution'} context={`${tp ? Math.round((ta / tp) * 100) : 0}% of plan`} />
+      </div>
+      {!hasDetail ? <EmptyState title={`No daily progress is loaded for ${active.name}. Select Belgaum expansion to enter progress.`} /> : !dateOk ? (
+        <EmptyState title={`No progress was logged for this date. Set the date back to the report date.`} action={{ label: 'Use report date', onClick: () => url.set('date', REPORT_DATE) }} />
+      ) : !shown.length ? <EmptyState title="No rows match. Clear the filters to see every activity." action={{ label: 'Clear filters', onClick: () => { url.clear(); setFilters({ discipline: 'All' }); } }} /> : (
         <>
-          <div className="hidden max-h-[720px] overflow-auto rounded-xl bg-surface md:block">
+          <div className="tile-white hidden max-h-[720px] overflow-auto !p-0 md:block">
             <table className="tbl w-full">
-              <caption className="sr-only">Daily progress by discipline, building and vendor. Select a row to enter today’s progress.</caption>
-              <thead><tr>{['Building', 'Vendor', 'Scope', 'Cum plan', 'Cum achieved', 'FTM plan', 'FTM actual', 'FTD plan', 'FTD actual', 'Weekly', 'Achieved', 'Remarks'].map((h, i) => <th key={h} scope="col" className={i >= 2 && i <= 9 ? 'num' : undefined}>{h}</th>)}</tr></thead>
+              <caption className="sr-only">Daily progress by discipline, building and vendor. Select a building to enter today’s progress.</caption>
+              <thead><tr>{['Building or activity', 'Vendor', 'Scope', 'Cum plan', 'Cum actual', 'Plan FTM', 'Actual FTM', 'Achieved', 'Shortfall'].map((h, i) => <th key={h} scope="col" className={i >= 2 && i <= 6 ? 'num' : undefined}>{h}</th>)}</tr></thead>
               <tbody>
                 {groups.map((g) => (
                   <Fragment key={g}>
-                    <tr><th scope="rowgroup" colSpan={12} className="!static !bg-canvas !text-sm">{TITLE[g] ?? g}</th></tr>
-                    {rows.filter((r) => r.discipline === g).map((r) => (
-                      <tr key={r.id} className="cursor-pointer" onClick={() => setOpenId(r.id)}>
-                        <td><button type="button" className="text-left font-medium" onClick={(e) => { e.stopPropagation(); setOpenId(r.id); }}>{r.building}</button></td>
+                    <tr><th scope="rowgroup" colSpan={9} style={{ position: 'static', background: 'var(--canvas)', fontSize: 14 }}>{TITLE[g] ?? g}</th></tr>
+                    {shown.filter((r) => r.discipline === g).map((r) => (
+                      <tr key={r.id}>
+                        <td><button type="button" className="text-left font-medium underline underline-offset-4" onClick={() => setOpenId(r.id)}>{r.building}</button></td>
                         <td>{r.vendor}</td>
-                        {[r.scope, r.cumPlan, r.cumAch, r.ftmPlan, r.ftmAct, r.ftdPlan, r.ftdAct, r.weekly].map((n, i) => <td key={i} className={`num ${i === 6 && n < r.ftdPlan ? 'text-bad' : ''}`}>{fmtNum(n)}</td>)}
+                        {[r.scope, r.cumPlan, r.cumAch, r.ftmPlan, r.ftmAct].map((n, i) => <td key={i} className="num">{num(n)}</td>)}
                         <td>{bar(r)}</td>
-                        <td className="max-w-[200px] truncate text-sub">{r.remarks || 'None'}</td>
+                        <td>{behind(r)}</td>
                       </tr>
                     ))}
                   </Fragment>
@@ -89,14 +117,14 @@ export default function Dpr() {
           <div className="flex flex-col gap-4 md:hidden">
             {groups.map((g) => (
               <section key={g} aria-label={TITLE[g] ?? g}>
-                <h2 className="mb-2 text-base font-medium">{TITLE[g] ?? g}</h2>
-                <ul className="flex flex-col gap-2">
-                  {rows.filter((r) => r.discipline === g).map((r) => (
+                <h2 className="mb-2 mt-0 text-base font-medium">{TITLE[g] ?? g}</h2>
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {shown.filter((r) => r.discipline === g).map((r) => (
                     <li key={r.id}>
-                      <button type="button" onClick={() => setOpenId(r.id)} className="flex w-full flex-col gap-3 rounded-xl bg-surface p-4 text-left">
-                        <span><span className="block font-medium">{r.building}</span><span className="text-sm text-sub">{r.vendor}</span></span>
+                      <button type="button" onClick={() => setOpenId(r.id)} className="tile-white flex w-full flex-col gap-3 text-left">
+                        <span><span className="block font-medium">{r.building}</span><span className="text-sm label">{r.vendor}</span></span>
                         {bar(r)}
-                        <span className="flex justify-between text-sm"><span>FTD plan {fmtNum(r.ftdPlan)}</span><span className={r.ftdAct < r.ftdPlan ? 'text-bad' : ''}>FTD actual {fmtNum(r.ftdAct)}</span></span>
+                        <span className="flex items-center justify-between text-sm"><span>Plan FTM {num(r.ftmPlan)}, actual {num(r.ftmAct)}</span>{behind(r)}</span>
                       </button>
                     </li>
                   ))}
@@ -106,7 +134,7 @@ export default function Dpr() {
           </div>
         </>
       )}
-      <Drawer open={!!cur} onClose={() => setOpenId(null)} title="Enter daily progress">{cur && <Entry key={cur.id} r={cur} onDone={() => setOpenId(null)} />}</Drawer>
-    </div>
+      <Drawer open={!!cur} onClose={() => setOpenId(null)} title="Log progress">{cur && <Entry key={cur.id} r={cur} onDone={() => setOpenId(null)} />}</Drawer>
+    </>
   );
 }

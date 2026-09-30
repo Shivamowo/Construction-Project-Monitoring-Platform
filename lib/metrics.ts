@@ -13,7 +13,10 @@ export const productivity = (qty: number, manDays: number) => (manDays ? qty / m
 export const ageing = (open: string) => diffDays(REPORT_DATE, open);
 export const ageBucket = (days: number) => (days <= 7 ? '0 to 7 days' : days <= 14 ? '8 to 14 days' : days <= 30 ? '15 to 30 days' : 'Over 30 days');
 export const AGE_BUCKETS = ['0 to 7 days', '8 to 14 days', '15 to 30 days', 'Over 30 days'];
-export const isOverdue = (a: ActionItem) => a.status !== 'Closed' && diffDays(REPORT_DATE, a.dueDate) > 0;
+export const isOverdue = (a: ActionItem) => a.status !== 'Closed' && ageing(a.openDate) > 30;
+export const ageTone = (days: number): 'good' | 'warn' | 'bad' => (days < 14 ? 'good' : days <= 30 ? 'warn' : 'bad');
+export const poPastDue = (p: PoRow) => !p.po.actual && p.po.plan < REPORT_DATE;
+export const shortfall = (plan: number, actual: number) => Math.max(plan - actual, 0);
 export const needsEscalation = (a: ActionItem) => a.status !== 'Closed' && ageing(a.openDate) > 14;
 export const milestoneLate = (m: Milestone) => (m.actual ? m.actual > m.plan : m.plan < REPORT_DATE);
 export const poStages = (p: PoRow) => [p.eng, p.tender, p.tech, p.commercial, p.po];
@@ -22,7 +25,7 @@ export const poReleased = (p: PoRow) => !!p.po.actual;
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const fmtDate = (d: string) => (d ? `${+d.slice(8, 10)} ${MON[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}` : 'Not set');
-export const fmtNum = (n: number, dp = 0) => n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+export const fmtNum = (n: number, dp = 0) => new Intl.NumberFormat('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp }).format(n);
 export const fmtPct = (n: number, dp = 0) => `${fmtNum(n, dp)}%`;
 export const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 export const cumulative = (xs: number[]) => { let t = 0; return xs.map((x) => (t += x)); };

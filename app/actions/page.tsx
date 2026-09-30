@@ -1,19 +1,18 @@
 'use client';
+import Link from 'next/link';
 import { useState } from 'react';
 import { useScoped } from '@/lib/store';
-import { AGE_BUCKETS, ageBucket, ageing, fmtDate, isOverdue, needsEscalation } from '@/lib/metrics';
+import { ageing, isOverdue } from '@/lib/metrics';
+import { dateShort } from '@/lib/format';
 import { REPORT_DATE } from '@/lib/brand';
-import { Bars, C } from '@/components/charts';
 import { Register, type Col, type RegFilter, type RegTab } from '@/components/Register';
-import { Button, Chip, Tile, inputCls } from '@/components/ui';
+import { AgeingCell, Button, KpiCard, OwnerCell, inputCls } from '@/components/ui';
 import type { ActionItem } from '@/lib/types';
 
-const PEOPLE = ['Anita Rao', 'Vikram Shetty', 'Meera Nair', 'Rohit Kulkarni', 'Sanjay Patil', 'Deepa Menon'];
-const CATS = ['Design', 'Procurement', 'Construction', 'Commercial', 'Site facilities', 'Planning'];
+const ROLES = ['Project team', 'Civil team', 'Site team', 'Commercial', 'Client representative', 'Contractor representative'];
+const CATS = ['Construction', 'Procurement', 'Engineering'];
 const STATUS: ActionItem['status'][] = ['Open', 'In progress', 'Closed'];
 const DISC = ['Civil', 'Structural', 'Mechanical', 'Electrical', 'Instrumentation', 'General'];
-const tally = (keys: string[], f: (a: ActionItem) => string, rows: ActionItem[]) => keys.map((k) => ({ name: k, Actions: rows.filter((r) => f(r) === k).length }));
-const S = [{ key: 'Actions', name: 'Actions', color: C.ink }];
 
 function Comments({ a }: { a: ActionItem }) {
   const { updateRow, toast } = useScoped();
@@ -25,10 +24,10 @@ function Comments({ a }: { a: ActionItem }) {
   };
   return (
     <div>
-      <h4 className="mb-2 text-sm font-medium">Comments ({a.comments.length})</h4>
+      <h4 className="mb-2 mt-0 text-sm font-medium">Comments ({a.comments.length})</h4>
       {a.comments.length ? (
-        <ul className="mb-3 flex flex-col gap-2">{a.comments.map((c, i) => <li key={i} className="inner text-sm"><span className="text-xs text-fog">{c.by}, {fmtDate(c.at)}</span><p>{c.text}</p></li>)}</ul>
-      ) : <p className="mb-3 text-sm text-fog">No comments yet. Add one to record a decision or update.</p>}
+        <ul className="mb-3 mt-0 flex list-none flex-col gap-2 p-0">{a.comments.map((c, i) => <li key={i} className="inner text-sm"><span className="text-xs" style={{ color: 'var(--fog)' }}>{c.by}, {dateShort(c.at)}</span><p className="m-0">{c.text}</p></li>)}</ul>
+      ) : <p className="mb-3 mt-0 text-sm" style={{ color: 'var(--fog)' }}>No comments yet. Add one to record a decision or update.</p>}
       <div className="flex gap-2">
         <input aria-label="New comment" value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a comment" className={inputCls} />
         <Button variant="dark" onClick={add}>Add comment</Button>
@@ -38,16 +37,19 @@ function Comments({ a }: { a: ActionItem }) {
 }
 
 export default function Actions() {
-  const { actions, active, filters } = useScoped();
+  const { actions, projects, active, filters, trends } = useScoped();
   const pid = filters.projectId === 'all' ? active.id : filters.projectId;
+  const open = actions.filter((a) => a.status !== 'Closed');
+  const month = REPORT_DATE.slice(0, 7);
   const cols: Col<ActionItem>[] = [
     { key: 'id', label: 'ID' },
     { key: 'title', label: 'Action', editable: true, add: true, required: true },
+    { key: 'projectId', label: 'Project', render: (a) => projects.find((p) => p.id === a.projectId)?.name ?? a.projectId },
     { key: 'category', label: 'Category', type: 'select', options: CATS, editable: true, add: true },
     { key: 'discipline', label: 'Discipline', type: 'select', options: DISC, editable: true, add: true },
-    { key: 'assignee', label: 'Assigned to', type: 'select', options: PEOPLE, editable: true, add: true },
-    { key: 'openDate', label: 'Opened', type: 'date', editable: true, add: true, render: (a) => <span className="flex flex-wrap items-center gap-2">{fmtDate(a.openDate)}{needsEscalation(a) && <Chip tone="bad">Escalate</Chip>}</span> },
-    { key: 'dueDate', label: 'Due', type: 'date', editable: true, add: true, render: (a) => <span className="flex flex-wrap items-center gap-2">{fmtDate(a.dueDate)}{isOverdue(a) && <Chip tone="bad">Overdue</Chip>}</span> },
+    { key: 'assignee', label: 'Responsibility', type: 'select', options: ROLES, editable: true, add: true, render: (a) => <OwnerCell role={a.assignee} /> },
+    { key: 'openDate', label: 'Ageing', render: (a) => (a.status === 'Closed' ? 'Closed' : <AgeingCell days={ageing(a.openDate)} />) },
+    { key: 'dueDate', label: 'Due or close date', type: 'date', editable: true, add: true, render: (a) => (a.status === 'Closed' ? `Closed ${dateShort(a.closedDate)}` : `Due ${dateShort(a.dueDate)}`) },
     { key: 'status', label: 'Status', type: 'select', options: STATUS, editable: true },
   ];
   const tabs: RegTab<ActionItem>[] = [
@@ -55,25 +57,28 @@ export default function Actions() {
     { id: 'closed', label: 'Closed', test: (a) => a.status === 'Closed' }, { id: 'overdue', label: 'Overdue', test: isOverdue },
   ];
   const filters2: RegFilter<ActionItem>[] = [
-    { key: 'state', label: 'State', options: ['Active', 'Closed'], test: (r, v) => (v === 'Closed') === (r.status === 'Closed') },
+    { key: 'owner', label: 'Responsibility', options: ROLES, test: (r, v) => r.assignee === v },
     { key: 'category', label: 'Category', options: CATS, test: (r, v) => r.category === v },
-    { key: 'assignee', label: 'Assigned to', options: PEOPLE, test: (r, v) => r.assignee === v },
-    { key: 'flag', label: 'Flag', options: ['Overdue', 'Escalated'], test: (r, v) => (v === 'Overdue' ? isOverdue(r) : needsEscalation(r)) },
+    { key: 'status', label: 'Status', options: ['Not closed', ...STATUS, 'Overdue'], test: (r, v) => (v === 'Not closed' ? r.status !== 'Closed' : v === 'Overdue' ? isOverdue(r) : r.status === v) },
   ];
-  const notClosed = actions.filter((a) => a.status !== 'Closed');
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Tile title="By status"><Bars label="Actions by status" xKey="name" height={160} data={tally(STATUS, (a) => a.status, actions)} series={S} highlight="Open" /></Tile>
-        <Tile title="By category"><Bars label="Actions by category" xKey="name" height={160} data={tally(CATS, (a) => a.category, actions)} series={S} /></Tile>
-        <Tile title="By ageing (not closed)"><Bars label="Open actions by ageing bucket" xKey="name" height={160} data={tally(AGE_BUCKETS, (a) => ageBucket(ageing(a.openDate)), notClosed)} series={S} highlight="Over 30 days" /></Tile>
+    <>
+      <div className="kpi-grid c4">
+        <KpiCard label="Open actions" value={open.length} rail="neutral" href="/actions?status=Not%20closed" spark={trends.actions} context={`${actions.length} actions in total`} />
+        <KpiCard label="Overdue over 30 days" value={actions.filter(isOverdue).length} rail="critical" href="/actions?status=Overdue" context="Open more than 30 days" />
+        <KpiCard label="Closed this month" value={actions.filter((a) => a.status === 'Closed' && a.closedDate.slice(0, 7) === month).length} rail="good" href="/actions?status=Closed" context="Closed in September 2026" />
+        <div className="tile-white kpi" style={{ ['--rail' as string]: '#188CE5' }}>
+          <div className="flex flex-col gap-2"><span className="label">Open by category</span>
+            <div className="flex flex-wrap gap-2">{CATS.map((c) => <Link key={c} href={`/actions?category=${c}`} className="chip chip-info">{c} {open.filter((a) => a.category === c).length}</Link>)}</div>
+          </div>
+        </div>
       </div>
       <Register<ActionItem> entity="actions" noun="action" rows={actions} cols={cols} filters={filters2} tabs={tabs} searchKeys={['title', 'assignee', 'id', 'category']} titleKey="title"
         ownerOf={(a) => a.assignee} ageOf={(a) => (a.status === 'Closed' ? 'closed' : `open ${ageing(a.openDate)} days`)} figureOf={(a) => (a.status === 'Closed' ? null : `${ageing(a.openDate)}d`)}
         statusOf={(a) => (isOverdue(a) ? { label: 'Overdue', tone: 'bad' } : { label: a.status, tone: a.status === 'Closed' ? 'good' : a.status === 'Open' ? 'info' : 'warn' })}
-        closePatch={{ status: 'Closed' }} extra={(a) => <Comments a={a} />}
-        makeRow={(d) => ({ id: `A-${Date.now().toString().slice(-5)}`, projectId: pid, title: d.title.trim(), category: d.category || CATS[0], discipline: d.discipline || 'General', assignee: d.assignee || PEOPLE[0],
-          openDate: d.openDate || REPORT_DATE, dueDate: d.dueDate || REPORT_DATE, status: 'Open', comments: [] })} />
-    </div>
+        closePatch={{ status: 'Closed', closedDate: REPORT_DATE }} extra={(a) => <Comments a={a} />}
+        makeRow={(d) => ({ id: `A-${Date.now().toString().slice(-5)}`, projectId: pid, title: d.title.trim(), category: d.category || CATS[0], discipline: d.discipline || 'General', assignee: d.assignee || ROLES[0],
+          openDate: REPORT_DATE, dueDate: d.dueDate || REPORT_DATE, status: 'Open', closedDate: '', comments: [] })} />
+    </>
   );
 }

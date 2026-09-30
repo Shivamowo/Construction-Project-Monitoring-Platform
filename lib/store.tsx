@@ -1,16 +1,22 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ACTIONS, DELAYS, DPR, PRIMARY, PROJECTS, RISKS } from '@/data/seed';
-import type { ActionItem, AuditEntry, Delay, DprRow, Entity, Gran, Risk } from './types';
+import * as repo from './repo';
+import type { ActionItem, AuditEntry, Delay, DprRow, DrawingRow, DrawingType, Entity, Gran, PoRow, Project, Risk } from './types';
 import { inRange } from './metrics';
 
 export interface Filters { projectId: string; discipline: string; range: string; gran: Gran }
 export interface Toast { id: number; msg: string; tone: 'ok' | 'error' }
 interface Data { actions: ActionItem[]; risks: Risk[]; delays: Delay[]; dpr: DprRow[]; audit: AuditEntry[] }
+interface Ref {
+  projects: Project[]; drawings: { types: (DrawingType & { discipline: string })[]; tracker: DrawingRow[] };
+  procurement: { rows: PoRow[]; categories: { name: string; total: number; planned: number; released: number; pastDue: number }[]; pipeline: { name: string; value: number }[] };
+  contractors: Awaited<ReturnType<typeof repo.getContractors>>; schedule: Awaited<ReturnType<typeof repo.getSchedule>>;
+  outline: [number, number][]; trends: Record<string, number[]>;
+}
 type Row = { id: string };
 
-interface Ctx extends Data {
-  ready: boolean; filters: Filters; setFilters: (p: Partial<Filters>) => void;
+interface Ctx extends Data, Ref {
+  ready: boolean; error: string; retry: () => void; filters: Filters; setFilters: (p: Partial<Filters>) => void;
   updateRow: (entity: Entity, id: string, patch: Record<string, unknown>) => void;
   addRow: (entity: Entity, row: Row) => void;
   auditOpen: boolean; setAuditOpen: (v: boolean) => void;
@@ -18,17 +24,22 @@ interface Ctx extends Data {
   toasts: Toast[]; toast: (msg: string, tone?: Toast['tone']) => void;
 }
 
-const KEY = 'sitewise:v1';
+const KEY = 'sitewise:v2';
+export const PRIMARY = repo.PRIMARY;
 export const DISCIPLINES = ['All', 'Civil', 'Structural', 'Mechanical', 'Electrical', 'Instrumentation', 'General'];
-const initial: Data = { actions: ACTIONS, risks: RISKS, delays: DELAYS, dpr: DPR, audit: [] };
+const emptyRef: Ref = { projects: [], drawings: { types: [], tracker: [] }, procurement: { rows: [], categories: [], pipeline: [] }, contractors: { monthly: [], manpower: [], vendors: [], quantities: [] }, schedule: [], outline: [], trends: {} };
+const emptyData: Data = { actions: [], risks: [], delays: [], dpr: [], audit: [] };
 const StoreCtx = createContext<Ctx | null>(null);
 const show = (v: unknown) => (Array.isArray(v) ? `${v.length} comments` : String(v ?? ''));
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<Data>(initial);
+  const [data, setData] = useState<Data>(emptyData);
+  const [ref, setRef] = useState<Ref>(emptyRef);
   const [filters, setF] = useState<Filters>({ projectId: PRIMARY, discipline: 'All', range: 'all', gran: 'Monthly' });
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const [auditOpen, setAuditOpen] = useState(false);
   const [cmd, setCmd] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
@@ -37,22 +48,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const seq = useRef(0);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s.data) setData((d) => ({ ...d, ...s.data }));
-        if (s.filters) setF((f) => ({ ...f, ...s.filters }));
+    let dead = false;
+    setError(''); setReady(false);
+    (async () => {
+      try {
+        const [projects, actions, risks, delays, dpr, drawings, procurement, contractors, schedule, outline, trends] = await Promise.all([
+          repo.getProjects(), repo.getActions(), repo.getRisks(), repo.getDelays(), repo.getDpr(), repo.getDrawings(), repo.getProcurement(), repo.getContractors(), repo.getSchedule(), repo.getMapOutline(), repo.getTrends(),
+        ]);
+        let saved: { data?: Partial<Data>; filters?: Partial<Filters> } | null = null;
+        try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { /* storage unavailable */ }
+        if (dead) return;
+        setRef({ projects, drawings, procurement, contractors, schedule, outline, trends });
+        setData({ actions: saved?.data?.actions ?? actions, risks: saved?.data?.risks ?? risks, delays: saved?.data?.delays ?? delays, dpr: saved?.data?.dpr ?? dpr, audit: saved?.data?.audit ?? [] });
+        if (saved?.filters) setF((f) => ({ ...f, ...saved!.filters }));
+        setReady(true);
+      } catch (e) {
+        if (!dead) { setError(e instanceof Error ? e.message : 'Data could not be loaded.'); setReady(true); }
       }
-    } catch { /* storage unavailable */ }
-    setReady(true);
-  }, []);
+    })();
+    return () => { dead = true; };
+  }, [attempt]);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || error) return;
     try { localStorage.setItem(KEY, JSON.stringify({ data, filters })); } catch { /* storage full or blocked */ }
-  }, [data, filters, ready]);
+  }, [data, filters, ready, error]);
 
   const setFilters = useCallback((p: Partial<Filters>) => setF((f) => ({ ...f, ...p })), []);
+  const retry = useCallback(() => setAttempt((a) => a + 1), []);
   const toast = useCallback((msg: string, tone: Toast['tone'] = 'ok') => {
     const id = ++seq.current;
     setToasts((t) => [...t, { id, msg, tone }]);
@@ -78,7 +100,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const value = useMemo<Ctx>(() => ({ ...data, ready, filters, setFilters, updateRow, addRow, auditOpen, setAuditOpen, cmd, fireCmd, showFilters, setShowFilters, toasts, toast }), [data,cmd,fireCmd,showFilters, ready, filters, setFilters, updateRow, addRow, auditOpen, toasts, toast]);
+  const value = useMemo<Ctx>(() => ({ ...data, ...ref, ready, error, retry, filters, setFilters, updateRow, addRow, auditOpen, setAuditOpen, cmd, fireCmd, showFilters, setShowFilters, toasts, toast }),
+    [data, ref, ready, error, retry, filters, setFilters, updateRow, addRow, auditOpen, cmd, fireCmd, showFilters, toasts, toast]);
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }
 
@@ -92,7 +115,7 @@ export function useStore() {
 export function useScoped() {
   const s = useStore();
   const { projectId, discipline, range } = s.filters;
-  const active = PROJECTS.find((p) => p.id === projectId) ?? PROJECTS[0];
+  const active = s.projects.find((p) => p.id === projectId) ?? s.projects.find((p) => p.id === PRIMARY) ?? s.projects[0];
   const hasDetail = projectId === 'all' || projectId === PRIMARY;
   return useMemo(() => {
     const scope = <T extends { projectId: string; discipline: string; openDate?: string }>(rows: T[]) =>

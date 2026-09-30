@@ -1,51 +1,62 @@
 'use client';
+import { useState } from 'react';
 import { useScoped } from '@/lib/store';
-import { ageing, fmtDate } from '@/lib/metrics';
+import { ageing } from '@/lib/metrics';
+import { dateShort } from '@/lib/format';
 import { REPORT_DATE } from '@/lib/brand';
-import { Bars, C } from '@/components/charts';
 import { Register, type Col, type RegFilter, type RegTab } from '@/components/Register';
-import { BigStat, Tile } from '@/components/ui';
+import { AgeingCell, KpiCard, OwnerCell, SegmentedControl } from '@/components/ui';
 import type { Delay } from '@/lib/types';
 
-const PEOPLE = ['Anita Rao', 'Vikram Shetty', 'Meera Nair', 'Rohit Kulkarni', 'Sanjay Patil', 'Deepa Menon'];
-const S = [{ key: 'Days', name: 'Days lost', color: C.ink }];
+const ROLES = ['Project team', 'Civil team', 'Site team', 'Commercial', 'Client representative', 'Contractor representative'];
+const isClient = (d: Delay) => d.person === 'Client representative';
+const isContractor = (d: Delay) => d.person === 'Contractor representative';
 
 export default function Delays() {
-  const { delays, active, filters } = useScoped();
+  const { delays, projects, active, filters, trends } = useScoped();
+  const [owner, setOwner] = useState<'All' | 'Client' | 'Contractor'>('All');
   const pid = filters.projectId === 'all' ? active.id : filters.projectId;
   const open = delays.filter((d) => d.status === 'Open');
+  const avg = open.length ? Math.round(open.reduce((s, d) => s + ageing(d.openDate), 0) / open.length) : 0;
+  const rows = delays.filter((d) => owner === 'All' || (owner === 'Client' ? isClient(d) : isContractor(d)));
   const orgs = [...new Set(delays.map((d) => d.org))];
   const cols: Col<Delay>[] = [
     { key: 'id', label: 'ID' },
-    { key: 'description', label: 'Description', editable: true, add: true, required: true },
-    { key: 'person', label: 'Responsible person', type: 'select', options: PEOPLE, editable: true, add: true },
-    { key: 'org', label: 'Responsible organization', editable: true, add: true, required: true },
-    { key: 'openDate', label: 'Open date', type: 'date', editable: true, add: true, render: (d) => fmtDate(d.openDate) },
-    { key: 'closeDate', label: 'Close date', type: 'date', editable: true, render: (d) => fmtDate(d.closeDate) },
+    { key: 'description', label: 'Delay or constraint', editable: true, add: true, required: true },
+    { key: 'projectId', label: 'Project', render: (d) => projects.find((p) => p.id === d.projectId)?.name ?? d.projectId },
+    { key: 'person', label: 'Responsibility', type: 'select', options: ROLES, editable: true, add: true, render: (d) => <OwnerCell role={d.person} /> },
+    { key: 'org', label: 'Organization', editable: true, add: true, required: true },
+    { key: 'openDate', label: 'Open date', render: (d) => dateShort(d.openDate) },
+    { key: 'closeDate', label: 'Close date', type: 'date', editable: true, render: (d) => dateShort(d.closeDate) },
+    { key: 'status', label: 'Ageing', render: (d) => (d.status === 'Open' ? <AgeingCell days={ageing(d.openDate)} /> : 'Closed') },
     { key: 'status', label: 'Status', type: 'select', options: ['Open', 'Closed'], editable: true },
     { key: 'daysLost', label: 'Days lost', type: 'number', editable: true, add: true },
     { key: 'linked', label: 'Linked building, PO or drawing', editable: true, add: true, wide: true },
   ];
   const tabs: RegTab<Delay>[] = [
     { id: 'all', label: 'All', test: () => true }, { id: 'open', label: 'Open', test: (d) => d.status === 'Open' },
-    { id: 'closed', label: 'Closed', test: (d) => d.status === 'Closed' }, { id: 'old', label: 'Open 30+ days', test: (d) => d.status === 'Open' && ageing(d.openDate) > 30 },
+    { id: 'closed', label: 'Closed', test: (d) => d.status === 'Closed' }, { id: 'old', label: 'Open over 30 days', test: (d) => d.status === 'Open' && ageing(d.openDate) > 30 },
   ];
   const filters2: RegFilter<Delay>[] = [
-    { key: 'state', label: 'Status', options: ['Open', 'Closed'], test: (r, v) => r.status === v },
+    { key: 'project', label: 'Project', options: projects.map((p) => p.name), test: (r, v) => projects.find((p) => p.id === r.projectId)?.name === v },
+    { key: 'status', label: 'Status', options: ['Open', 'Closed'], test: (r, v) => r.status === v },
     { key: 'org', label: 'Organization', options: orgs, test: (r, v) => r.org === v },
   ];
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Tile><div className="flex flex-col gap-4"><BigStat label="Open delays" value={open.length} href="/delays?state=Open" /><BigStat label="Days lost on open delays" value={open.reduce((s, d) => s + d.daysLost, 0)} unit="days" tone="bad" /></div></Tile>
-        <Tile title="Days lost by organization" className="md:col-span-2"><Bars label="Days lost by organization" xKey="name" height={160} highlight={undefined} series={S}
-          data={orgs.map((o) => ({ name: o.length > 14 ? `${o.slice(0, 13)}…` : o, Days: delays.filter((d) => d.org === o).reduce((s, d) => s + d.daysLost, 0) }))} /></Tile>
+    <>
+      <div className="kpi-grid c4">
+        <KpiCard label="Open delays" value={open.length} rail="critical" href="/delays?status=Open" spark={trends.delays} context={`${delays.reduce((s, d) => s + (d.status === 'Open' ? d.daysLost : 0), 0)} days lost so far`} />
+        <KpiCard label="Client actions" value={open.filter(isClient).length} rail="caution" context="Open delays owned by the client" />
+        <KpiCard label="Contractor actions" value={open.filter(isContractor).length} rail="caution" context="Open delays owned by contractors" />
+        <KpiCard label="Average ageing" value={avg} unit="days" rail="critical" spark={trends.ageing} context="Across open delays" />
       </div>
-      <Register<Delay> entity="delays" noun="delay" rows={delays} cols={cols} filters={filters2} tabs={tabs} searchKeys={['description', 'person', 'org', 'linked', 'id']} titleKey="description"
+      <Register<Delay> entity="delays" noun="delay" rows={rows} cols={cols} filters={filters2} tabs={tabs} searchKeys={['description', 'person', 'org', 'linked', 'id']} titleKey="description"
+        addLabel="Log delay" addedMsg="Delay logged"
+        toolbar={<span className="inline-flex items-center gap-2 text-sm"><span className="label">Owned by</span><SegmentedControl label="Owned by" options={['All', 'Client', 'Contractor'] as const} value={owner} onChange={setOwner} /></span>}
         ownerOf={(d) => d.person} ageOf={(d) => (d.status === 'Closed' ? 'closed' : `open ${ageing(d.openDate)} days`)} figureOf={(d) => `${d.daysLost}d`}
         statusOf={(d) => ({ label: d.status, tone: d.status === 'Open' ? 'bad' : 'good' })} closePatch={{ status: 'Closed', closeDate: REPORT_DATE }}
-        makeRow={(d) => ({ id: `D-${Date.now().toString().slice(-5)}`, projectId: pid, description: d.description.trim(), person: d.person || PEOPLE[0], org: d.org.trim(), openDate: d.openDate || REPORT_DATE, closeDate: '',
+        makeRow={(d) => ({ id: `D-${Date.now().toString().slice(-5)}`, projectId: pid, description: d.description.trim(), person: d.person || ROLES[0], org: d.org.trim(), openDate: d.openDate || REPORT_DATE, closeDate: '',
           status: 'Open', daysLost: Number(d.daysLost) || 0, linked: d.linked ?? '', discipline: 'General' })} />
-    </div>
+    </>
   );
 }

@@ -6,6 +6,9 @@ import { useStore } from '@/lib/store';
 
 export { BigStat, StripeBar, toneFor } from './Stats';
 export { FilterBar, PillSelect } from './FilterBar';
+export { KpiCard, Sparkline, RAIL } from './Kpi';
+export { StatusChip, AgeingCell, OwnerCell, VarianceChip, Skeleton, Gate } from './Cells';
+export { FilterCluster, HeaderFilters, useUrlParams, type FilterDef } from './FilterCluster';
 export { DarkPanel, TabNotch, MasterRow, DetailPane, InnerTile } from './Panel';
 
 export function useReducedMotion() {
